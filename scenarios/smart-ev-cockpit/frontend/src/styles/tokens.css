@@ -1,0 +1,21 @@
+:root {
+  color-scheme: dark;
+  --bg: #030607;
+  --surface: #11181b;
+  --surface-strong: #172226;
+  --surface-soft: #0a1012;
+  --glass: rgb(14 22 25 / 72%);
+  --glass-strong: rgb(8 13 15 / 88%);
+  --text: #edf7f7;
+  --muted: #92a5a8;
+  --line: rgb(151 174 179 / 20%);
+  --line-strong: rgb(213 232 235 / 36%);
+  --accent: #34d6ca;
+  --accent-strong: #84f8ec;
+  --amber: #f4b04f;
+  --red: #ff6f69;
+  --green: #5fe38b;
+  --chrome: #c7d1d3;
+  --shadow-strong: 0 24px 70px rgb(0 0 0 / 52%);
+  --radius: 8px;
+}

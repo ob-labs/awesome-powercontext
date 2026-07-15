@@ -1,0 +1,9 @@
+{
+  "vehicle_id": "demo_vehicle_001",
+  "display_name": "Demo Vehicle",
+  "model_family": "VehicleX Touring",
+  "platform_version": "VX.OS 2.5",
+  "assistant_version": "Cabin Assistant 4.2",
+  "supported_features": ["zone_hvac", "seat_heat", "steering_wheel_heat", "drive_mode", "media_playback"],
+  "unsupported_features": ["rest_mode"]
+}
