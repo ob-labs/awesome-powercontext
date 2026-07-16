@@ -1,0 +1,2145 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PowerMem × Smart EV Cockpit</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --accent: #7ed3a4;
+        --accent-soft: rgb(126 211 164 / 14%);
+        --accent-line: rgb(126 211 164 / 55%);
+        --warn: #e6b35a;
+        --err: #e06c75;
+        --bg: #0a0c10;
+        --ink: #e8ecef;
+        --muted: rgb(232 236 239 / 72%);
+        --muted-soft: rgb(232 236 239 / 52%);
+        --line: rgb(126 211 164 / 18%);
+        --line-strong: rgb(126 211 164 / 42%);
+        --panel: rgb(8 12 16 / 78%);
+        --panel-strong: rgb(8 12 16 / 90%);
+        --cockpit-bg: url("smart-ev-cockpit-bg.png");
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          "JetBrains Mono",
+          "SFMono-Regular",
+          Consolas,
+          "Noto Sans SC",
+          "Microsoft YaHei",
+          "PingFang SC",
+          monospace;
+      }
+
+      body {
+        overflow: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgb(126 211 164 / 7%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(126 211 164 / 7%) 1px, transparent 1px);
+        background-size: 56px 56px;
+        opacity: 0.55;
+        z-index: 3;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgb(0 0 0 / 12%) 2px,
+            rgb(0 0 0 / 12%) 3px
+          ),
+          radial-gradient(ellipse at center, transparent 42%, rgb(0 0 0 / 72%) 100%);
+        opacity: 0.55;
+        z-index: 4;
+        animation: scan-drift 9s linear infinite;
+      }
+
+      @keyframes scan-drift {
+        from { background-position: 0 0, center; }
+        to { background-position: 0 48px, center; }
+      }
+
+      @keyframes cursor-blink {
+        0%, 49% { opacity: 1; }
+        50%, 100% { opacity: 0; }
+      }
+
+      @keyframes bench-sweep {
+        0% { transform: scaleX(0.15); opacity: 0.45; }
+        40% { transform: scaleX(1); opacity: 1; }
+        100% { transform: scaleX(1); opacity: 1; }
+      }
+
+      @keyframes pipeline-pulse {
+        0%, 100% { border-color: var(--line); background: rgb(8 12 16 / 72%); box-shadow: none; }
+        12% { border-color: var(--accent-line); background: var(--accent-soft); box-shadow: 0 0 18px rgb(126 211 164 / 18%); }
+        24% { border-color: var(--line); background: rgb(8 12 16 / 72%); box-shadow: none; }
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .deck {
+        position: relative;
+        width: 100vw;
+        height: 100dvh;
+        overflow: hidden;
+        background: var(--bg);
+      }
+
+      .slide {
+        display: none;
+        width: 100vw;
+        height: 100dvh;
+        padding: clamp(28px, 4vw, 64px);
+        grid-template-columns: repeat(16, 1fr);
+        grid-template-rows: auto 1fr auto;
+        gap: 0;
+        position: absolute;
+        inset: 0;
+        color: var(--ink);
+        background:
+          linear-gradient(105deg, rgb(10 12 16 / 94%), rgb(10 12 16 / 82%) 48%, rgb(10 12 16 / 92%)),
+          linear-gradient(180deg, rgb(10 12 16 / 40%), rgb(10 12 16 / 78%)),
+          var(--cockpit-bg) center / cover;
+      }
+
+      .slide.is-active {
+        display: grid;
+      }
+
+      .slide::before {
+        content: "";
+        position: absolute;
+        inset: clamp(18px, 2.2vw, 36px);
+        border: 1px solid var(--line);
+        pointer-events: none;
+      }
+
+      .cover {
+        color: var(--ink);
+      }
+
+      .cover::before,
+      .dark::before {
+        border-color: var(--line);
+      }
+
+      .dark {
+        color: var(--ink);
+      }
+
+      .section-kicker {
+        grid-column: 1 / 16;
+        align-self: start;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: clamp(11px, 0.82vw, 14px);
+        letter-spacing: 0.02em;
+        text-transform: none;
+        line-height: 1.4;
+        color: var(--accent);
+      }
+
+      .slide-number {
+        position: absolute;
+        right: clamp(28px, 4vw, 64px);
+        bottom: clamp(24px, 3vw, 48px);
+        z-index: 2;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        color: var(--muted-soft);
+      }
+
+      .topic {
+        position: absolute;
+        left: clamp(28px, 4vw, 64px);
+        bottom: clamp(24px, 3vw, 48px);
+        z-index: 2;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted-soft);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        grid-column: 1 / 16;
+        align-self: end;
+        max-width: none;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Noto Sans SC", monospace;
+        font-size: clamp(28px, 4.2vw, 64px);
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        font-weight: 700;
+        white-space: nowrap;
+        text-wrap: nowrap;
+        color: var(--accent);
+      }
+
+      h2 {
+        grid-column: 1 / 16;
+        align-self: start;
+        max-width: none;
+        font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+        font-size: clamp(22px, 2.6vw, 42px);
+        line-height: 1.08;
+        letter-spacing: 0;
+        font-weight: 760;
+        white-space: nowrap;
+        text-wrap: nowrap;
+      }
+
+      h3 {
+        color: var(--ink);
+        font-size: clamp(19px, 1.65vw, 29px);
+        line-height: 1.1;
+        font-weight: 760;
+      }
+
+      .lead {
+        grid-column: 10 / 16;
+        align-self: end;
+        max-width: 620px;
+        font-size: clamp(16px, 1.08vw, 20px);
+        line-height: 1.55;
+        color: var(--muted);
+      }
+
+      .body-large {
+        font-size: clamp(20px, 2.05vw, 32px);
+        line-height: 1.14;
+        font-weight: 720;
+        color: var(--ink);
+      }
+
+      .body-text {
+        font-size: clamp(13px, 0.95vw, 16px);
+        line-height: 1.55;
+        color: var(--muted);
+      }
+
+      .section-lead {
+        grid-column: 12 / 17;
+        align-self: start;
+        margin-top: 0.4rem;
+        color: var(--muted);
+        font-size: clamp(13px, 0.9vw, 16px);
+        line-height: 1.5;
+      }
+
+      .cover .body-text,
+      .dark .body-text,
+      .cover .lead,
+      .dark .lead {
+        color: var(--muted);
+      }
+
+      .accent {
+        color: var(--accent);
+      }
+
+      .cover .accent {
+        color: var(--accent);
+      }
+
+      .grid-six {
+        grid-column: 1 / 17;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+        align-self: center;
+      }
+
+      .cell {
+        min-height: 15dvh;
+        padding: clamp(14px, 1.45vw, 22px);
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .grid-eight {
+        grid-column: 1 / 17;
+        align-self: center;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+      }
+
+      .grid-eight .cell {
+        min-height: 14dvh;
+      }
+
+      .cell strong,
+      .card strong,
+      .ledger strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: clamp(16px, 1.18vw, 21px);
+        line-height: 1.2;
+        color: var(--ink);
+      }
+
+      .cell span,
+      .card span,
+      .ledger span {
+        display: block;
+        font-size: clamp(12px, 0.86vw, 15px);
+        line-height: 1.45;
+        color: var(--muted);
+      }
+
+      .metric-row {
+        grid-column: 1 / 17;
+        align-self: center;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+      }
+
+      .metric {
+        min-height: 22dvh;
+        padding: clamp(16px, 1.55vw, 24px);
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .metric:first-child {
+        border-left: 1px solid var(--line);
+      }
+
+      .metric b {
+        display: block;
+        margin-bottom: 12px;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: clamp(28px, 3.4vw, 56px);
+        line-height: 0.94;
+        color: var(--accent);
+      }
+
+      .metric em {
+        display: block;
+        font-style: normal;
+        font-weight: 740;
+        font-size: clamp(14px, 1vw, 18px);
+        color: var(--ink);
+      }
+
+      .metric span {
+        display: block;
+        margin-top: 14px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .mini-metrics {
+        grid-column: 1 / 17;
+        align-self: end;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-top: 1px solid var(--accent-line);
+      }
+
+      .mini-metrics span {
+        min-height: 78px;
+        padding: 14px 16px;
+        border-right: 1px solid var(--line);
+        color: var(--muted);
+        font-size: clamp(12px, 0.82vw, 14px);
+        line-height: 1.45;
+        background: var(--accent-soft);
+      }
+
+      .mini-metrics b {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--accent);
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: clamp(18px, 1.45vw, 26px);
+        line-height: 1;
+      }
+
+      .statement {
+        grid-column: 2 / 16;
+        align-self: center;
+        max-width: 22ch;
+        font-size: clamp(34px, 4.2vw, 66px);
+        line-height: 1.04;
+        font-weight: 820;
+      }
+
+      .note {
+        grid-column: 11 / 16;
+        align-self: end;
+        padding-top: 18px;
+        border-top: 1px solid var(--accent-line);
+        font-size: clamp(15px, 1.2vw, 20px);
+        line-height: 1.55;
+        color: var(--muted);
+      }
+
+      .compare {
+        grid-column: 1 / 17;
+        align-self: center;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .compare > div {
+        min-height: 42dvh;
+        padding: clamp(18px, 2vw, 30px);
+      }
+
+      .compare > div + div {
+        border-left: 1px solid var(--line);
+        background: var(--panel-strong);
+      }
+
+      .compare ul,
+      .cards ul {
+        margin: 24px 0 0;
+        padding-left: 1.15em;
+        color: var(--muted);
+        line-height: 1.5;
+        font-size: clamp(13px, 0.94vw, 16px);
+      }
+
+      .dense-list {
+        margin: 16px 0 0;
+        padding-left: 1.1em;
+        color: var(--muted);
+        font-size: clamp(12px, 0.86vw, 15px);
+        line-height: 1.46;
+      }
+
+      .dense-list li + li {
+        margin-top: 6px;
+      }
+
+      .diagram {
+        grid-column: 1 / 17;
+        align-self: center;
+        display: grid;
+        grid-template-columns: repeat(16, 1fr);
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .diagram-node {
+        padding: clamp(14px, 1.45vw, 22px);
+        min-height: 18dvh;
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: rgb(8 12 16 / 62%);
+      }
+
+      .diagram-node:nth-child(1) {
+        grid-column: 1 / 5;
+      }
+
+      .diagram-node:nth-child(2) {
+        grid-column: 5 / 9;
+      }
+
+      .diagram-node:nth-child(3) {
+        grid-column: 9 / 13;
+      }
+
+      .diagram-node:nth-child(4) {
+        grid-column: 13 / 17;
+        border-right: 0;
+      }
+
+      .diagram-node.wide {
+        grid-column: span 8;
+      }
+
+      .diagram-node.full {
+        grid-column: 1 / 17;
+        border-right: 0;
+        min-height: 13dvh;
+      }
+
+      .deck-architecture,
+      .architecture-board,
+      .flow-board,
+      .swimlane-board,
+      .business-loop {
+        grid-column: 1 / 17;
+        align-self: center;
+        position: relative;
+        border: 1px solid var(--line);
+        background: rgb(8 12 16 / 72%);
+      }
+
+      .architecture-board {
+        display: grid;
+        grid-template-columns: 1fr 1.35fr 1fr;
+        gap: clamp(10px, 1vw, 16px);
+        padding: clamp(14px, 1.4vw, 22px);
+      }
+
+      .arch-panel,
+      .flow-node,
+      .lane-card,
+      .source-chip {
+        border: 1px solid var(--line);
+        background: rgb(8 12 16 / 78%);
+        padding: clamp(11px, 1vw, 16px);
+      }
+
+      .arch-panel.accent-panel,
+      .flow-node.accent-node,
+      .lane-card.accent-lane {
+        border-color: var(--accent-line);
+        background: var(--accent-soft);
+      }
+
+      .arch-panel strong,
+      .flow-node strong,
+      .lane-card strong,
+      .source-chip strong {
+        display: block;
+        color: var(--ink);
+        font-size: clamp(13px, 0.92vw, 17px);
+        line-height: 1.18;
+      }
+
+      .arch-panel span,
+      .flow-node span,
+      .lane-card span,
+      .source-chip span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: clamp(11px, 0.78vw, 13px);
+        line-height: 1.36;
+      }
+
+      .arch-stack,
+      .flow-stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .arch-core {
+        display: grid;
+        gap: 10px;
+        border: 1px solid var(--accent-line);
+        background: var(--accent-soft);
+        padding: clamp(14px, 1.4vw, 22px);
+      }
+
+      .arch-core h3 {
+        color: var(--accent);
+        font-size: clamp(20px, 1.55vw, 28px);
+      }
+
+      .chip-grid,
+      .proof-bar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .chip-grid.five {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+
+      .chip,
+      .proof-item {
+        border: 1px solid var(--line);
+        background: rgb(255 255 255 / 5%);
+        padding: 8px 10px;
+        color: var(--muted);
+        font-size: clamp(10px, 0.74vw, 12px);
+        line-height: 1.24;
+      }
+
+      .proof-item b {
+        display: block;
+        color: var(--accent);
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: clamp(16px, 1.25vw, 22px);
+        line-height: 1;
+        margin-bottom: 5px;
+      }
+
+      .flow-board {
+        display: grid;
+        gap: clamp(10px, 1vw, 16px);
+        padding: clamp(14px, 1.4vw, 22px);
+      }
+
+      .flow-row {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 8px;
+        align-items: stretch;
+      }
+
+      .flow-row.four {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .flow-row.six {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+
+      .flow-node {
+        min-height: 104px;
+      }
+
+      .flow-arrow {
+        display: grid;
+        place-items: center;
+        color: var(--accent);
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: clamp(18px, 1.4vw, 25px);
+      }
+
+      .source-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .lifecycle-board {
+        grid-column: 1 / 17;
+        align-self: center;
+        border: 1px solid var(--line);
+        background: rgb(8 12 16 / 72%);
+        padding: clamp(14px, 1.4vw, 22px);
+      }
+
+      .memory-levels {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .memory-level {
+        min-height: 178px;
+        border: 1px solid var(--line);
+        background: rgb(8 12 16 / 78%);
+        padding: clamp(14px, 1.3vw, 20px);
+      }
+
+      .memory-level b {
+        color: var(--accent);
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      }
+
+      .equation-strip {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .swimlane-board {
+        display: grid;
+        grid-template-columns: 0.85fr repeat(6, minmax(0, 1fr));
+        gap: 0;
+        overflow: hidden;
+      }
+
+      .lane-label,
+      .lane-card {
+        min-height: 112px;
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .lane-label {
+        display: grid;
+        align-content: center;
+        padding: 14px;
+        color: var(--accent);
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: clamp(11px, 0.8vw, 13px);
+      }
+
+      .business-loop {
+        display: grid;
+        grid-template-columns: 0.8fr 1.6fr;
+        gap: clamp(12px, 1.2vw, 18px);
+        padding: clamp(14px, 1.4vw, 22px);
+      }
+
+      .loop-map {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .cards {
+        grid-column: 1 / 17;
+        align-self: center;
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr 0.85fr;
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .cards.four {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .card {
+        min-height: 32dvh;
+        padding: clamp(18px, 2vw, 30px);
+        border-right: 1px solid var(--line);
+        background: rgb(8 12 16 / 62%);
+      }
+
+      .card:last-child {
+        border-right: 0;
+      }
+
+      .card.accent-card {
+        border-color: var(--accent-line);
+        background: var(--accent-soft);
+        color: var(--ink);
+      }
+
+      .card.accent-card span,
+      .card.accent-card .body-text {
+        color: var(--muted);
+      }
+
+      .ledger {
+        grid-column: 1 / 17;
+        align-self: center;
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .ledger-row {
+        display: grid;
+        grid-template-columns: 1.2fr 2fr 3fr;
+        gap: 24px;
+        padding: clamp(16px, 2vw, 28px);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .ledger-row:last-child {
+        border-bottom: 0;
+      }
+
+      .ledger-row b {
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: clamp(24px, 3vw, 48px);
+        line-height: 1;
+        color: var(--accent);
+      }
+
+      .process {
+        grid-column: 1 / 17;
+        align-self: center;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .process-step {
+        min-height: 20dvh;
+        padding: clamp(14px, 1.4vw, 22px);
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .process-step b {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--accent);
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: clamp(18px, 1.5vw, 26px);
+        line-height: 1;
+      }
+
+      .process-step strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--ink);
+        font-size: clamp(15px, 1vw, 18px);
+        line-height: 1.15;
+      }
+
+      .process-step span {
+        color: var(--muted);
+        font-size: clamp(12px, 0.86vw, 15px);
+        line-height: 1.45;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .tag-row span {
+        border: 1px solid var(--line);
+        background: rgb(8 12 16 / 68%);
+        color: var(--muted);
+        padding: 6px 8px;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 11px;
+        line-height: 1;
+      }
+
+      .visual-frame {
+        grid-column: 9 / 17;
+        align-self: stretch;
+        margin: 5dvh 0 8dvh;
+        border: 1px solid var(--line);
+        background:
+          linear-gradient(rgb(7 16 20 / 24%), rgb(7 16 20 / 44%)),
+          var(--cockpit-bg) center / cover;
+      }
+
+      .dark .visual-frame {
+        border-color: var(--line);
+      }
+
+      .image-copy {
+        grid-column: 1 / 8;
+        align-self: center;
+      }
+
+      .mono {
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      }
+
+      .tiny {
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        color: var(--muted-soft);
+      }
+
+      .cover .tiny,
+      .dark .tiny {
+        color: var(--muted-soft);
+      }
+
+      .controls {
+        position: fixed;
+        z-index: 10;
+        right: 22px;
+        top: 22px;
+        display: flex;
+        gap: 8px;
+      }
+
+      .controls button {
+        width: 42px;
+        height: 42px;
+        border: 1px solid currentColor;
+        background: var(--panel-strong);
+        color: var(--muted);
+        cursor: pointer;
+      }
+
+      .controls button:hover {
+        color: var(--ink);
+        border-color: var(--accent-line);
+      }
+
+      .controls button:active {
+        transform: translateY(1px);
+      }
+
+      .progress {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        z-index: 12;
+        height: 5px;
+        width: var(--progress, 5%);
+        background: var(--accent);
+        transition: width 180ms ease;
+      }
+
+      .print-note {
+        position: fixed;
+        left: 22px;
+        top: 22px;
+        z-index: 10;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        color: var(--muted-soft);
+      }
+
+      @media (max-width: 860px) {
+        body {
+          overflow: auto;
+        }
+
+        .deck {
+          height: auto;
+          overflow: visible;
+        }
+
+        .slide {
+          position: relative;
+          display: grid;
+          min-height: 100dvh;
+          height: auto;
+          padding: 26px;
+          grid-template-columns: 1fr;
+          gap: 24px;
+        }
+
+        .slide:not(.is-active) {
+          display: none;
+        }
+
+        .slide::before {
+          inset: 12px;
+        }
+
+        h1,
+        h2,
+        .lead,
+        .section-lead,
+        .section-kicker,
+        .statement,
+        .note,
+        .visual-frame,
+        .image-copy,
+        .grid-six,
+        .grid-eight,
+        .metric-row,
+        .mini-metrics,
+        .compare,
+         .diagram,
+         .deck-architecture,
+         .architecture-board,
+         .flow-board,
+         .lifecycle-board,
+         .swimlane-board,
+         .business-loop,
+         .cards,
+         .ledger,
+         .process {
+           grid-column: 1;
+        }
+
+        h1 {
+          font-size: clamp(18px, 4.8vw, 26px);
+        }
+
+        h2 {
+          font-size: clamp(20px, 5.6vw, 30px);
+        }
+
+        .grid-six,
+        .grid-eight,
+        .metric-row,
+        .mini-metrics,
+        .compare,
+        .cards,
+         .cards.four,
+         .process {
+           grid-template-columns: 1fr;
+         }
+
+         .architecture-board,
+         .business-loop,
+         .source-strip,
+         .memory-levels,
+         .equation-strip {
+           grid-template-columns: 1fr;
+         }
+
+         .flow-row,
+         .flow-row.four,
+         .flow-row.six,
+         .chip-grid,
+         .chip-grid.five,
+         .proof-bar,
+         .loop-map {
+           grid-template-columns: repeat(2, minmax(0, 1fr));
+         }
+
+         .swimlane-board {
+           grid-template-columns: 1fr;
+         }
+
+         .card,
+         .compare > div,
+         .metric,
+        .process-step {
+          border-right: 0;
+          min-height: auto;
+        }
+
+        .diagram {
+          display: block;
+        }
+
+        .diagram-node,
+        .diagram-node:nth-child(4) {
+          border-right: 0;
+        }
+
+        .ledger-row {
+          grid-template-columns: 1fr;
+        }
+
+        .visual-frame {
+          min-height: 36dvh;
+          margin: 0 0 44px;
+        }
+      }
+
+
+      .cursor-blink::after {
+        content: "▋";
+        margin-left: 6px;
+        color: var(--accent);
+        animation: cursor-blink 1.05s steps(1) infinite;
+      }
+
+      .term-window {
+        grid-column: 1 / 17;
+        align-self: center;
+        border: 1px solid var(--accent-line);
+        background: rgb(8 12 16 / 82%);
+        box-shadow: 0 0 0 1px rgb(126 211 164 / 8%), 0 18px 50px rgb(0 0 0 / 45%);
+        overflow: hidden;
+      }
+
+      .term-chrome {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+        background: rgb(126 211 164 / 6%);
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+        color: var(--muted-soft);
+        letter-spacing: 0.04em;
+      }
+
+      .term-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      .term-dot.err { background: var(--err); }
+      .term-dot.warn { background: var(--warn); }
+      .term-dot.ok { background: var(--accent); }
+
+      .term-body {
+        padding: clamp(16px, 1.8vw, 28px);
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--line);
+        padding: 5px 9px;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .tag.ok {
+        border-color: rgb(126 211 164 / 45%);
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .tag.warn {
+        border-color: rgb(230 179 90 / 45%);
+        color: var(--warn);
+        background: rgb(230 179 90 / 12%);
+      }
+
+      .tag.err {
+        border-color: rgb(224 108 117 / 45%);
+        color: var(--err);
+        background: rgb(224 108 117 / 12%);
+      }
+
+      .bench-grid {
+        grid-column: 1 / 17;
+        align-self: center;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: clamp(12px, 1.2vw, 18px);
+      }
+
+      .bench-card {
+        border: 1px solid var(--line);
+        background: rgb(8 12 16 / 78%);
+        padding: clamp(18px, 1.8vw, 28px);
+        min-height: 34dvh;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .bench-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 3px;
+        background: var(--accent);
+      }
+
+      .bench-card .tag-row {
+        margin-top: 0;
+        margin-bottom: 18px;
+      }
+
+      .bench-card .delta {
+        display: block;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: clamp(42px, 5.2vw, 78px);
+        line-height: 0.92;
+        color: var(--accent);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+
+      .bench-card .delta-label {
+        display: block;
+        margin-top: 10px;
+        font-size: clamp(15px, 1.1vw, 20px);
+        font-weight: 720;
+        color: var(--ink);
+      }
+
+      .bench-card .delta-sub {
+        display: block;
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: clamp(12px, 0.86vw, 15px);
+        line-height: 1.45;
+      }
+
+      .bench-bar {
+        margin-top: 22px;
+        height: 6px;
+        border: 1px solid var(--accent-line);
+        background: transparent;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .bench-bar > i {
+        display: block;
+        height: 100%;
+        width: var(--w, 70%);
+        background: var(--accent);
+        transform-origin: left center;
+        animation: bench-sweep 1.6s ease-out both;
+      }
+
+      .principle-grid {
+        grid-column: 1 / 17;
+        align-self: center;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .principle-card {
+        border: 1px solid var(--line);
+        background: rgb(8 12 16 / 78%);
+        min-height: 36dvh;
+        padding: clamp(16px, 1.5vw, 24px);
+        display: grid;
+        grid-template-rows: auto auto 1fr auto;
+        gap: 10px;
+      }
+
+      .principle-card.accent {
+        border-color: var(--accent-line);
+        background: var(--accent-soft);
+      }
+
+      .principle-card .cmd {
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        color: var(--accent);
+        font-size: clamp(12px, 0.85vw, 14px);
+        letter-spacing: 0.02em;
+      }
+
+      .principle-card strong {
+        font-size: clamp(22px, 2vw, 34px);
+        line-height: 1.05;
+        color: var(--ink);
+      }
+
+      .principle-card span {
+        color: var(--muted);
+        font-size: clamp(12px, 0.88vw, 15px);
+        line-height: 1.5;
+      }
+
+      .pipeline-board {
+        grid-column: 1 / 17;
+        align-self: center;
+        display: grid;
+        gap: 16px;
+      }
+
+      .pipeline-track {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .pipe-step {
+        border: 1px solid var(--line);
+        background: rgb(8 12 16 / 72%);
+        padding: clamp(14px, 1.3vw, 20px);
+        min-height: 22dvh;
+        animation: pipeline-pulse 7.5s ease-in-out infinite;
+      }
+
+      .pipe-step:nth-child(1) { animation-delay: 0s; }
+      .pipe-step:nth-child(2) { animation-delay: 1.5s; }
+      .pipe-step:nth-child(3) { animation-delay: 3s; }
+      .pipe-step:nth-child(4) { animation-delay: 4.5s; }
+      .pipe-step:nth-child(5) { animation-delay: 6s; }
+
+      .pipe-step b {
+        display: block;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        color: var(--accent);
+        font-size: clamp(12px, 0.85vw, 14px);
+        margin-bottom: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .pipe-step strong {
+        display: block;
+        color: var(--ink);
+        font-size: clamp(16px, 1.2vw, 22px);
+        margin-bottom: 8px;
+        line-height: 1.15;
+      }
+
+      .pipe-step span {
+        display: block;
+        color: var(--muted);
+        font-size: clamp(12px, 0.82vw, 14px);
+        line-height: 1.4;
+      }
+
+      .pipeline-sub {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 12px;
+      }
+
+      .pipeline-sub .term-window {
+        grid-column: auto;
+      }
+
+      .wow-footer {
+        grid-column: 1 / 17;
+        align-self: end;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 8px;
+      }
+
+      @media (max-width: 860px) {
+        .bench-grid,
+        .principle-grid,
+        .pipeline-track,
+        .pipeline-sub {
+          grid-template-columns: 1fr;
+        }
+
+        .bench-grid,
+        .principle-grid,
+        .pipeline-board,
+        .term-window,
+        .wow-footer {
+          grid-column: 1;
+        }
+      }
+
+      @media print {
+        body {
+          overflow: visible;
+        }
+
+        .deck {
+          height: auto;
+          overflow: visible;
+        }
+
+        .slide,
+        .slide.is-active {
+          display: grid;
+          position: relative;
+          page-break-after: always;
+          break-after: page;
+          width: 100vw;
+          height: 100vh;
+        }
+
+        .controls,
+        .progress,
+        .print-note {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body data-total="23" data-theme="hermes-cyber">
+    <div class="print-note">Arrow keys / Space / hash navigation</div>
+    <div class="controls" aria-label="Deck controls">
+      <button type="button" data-prev aria-label="上一页">←</button>
+      <button type="button" data-next aria-label="下一页">→</button>
+    </div>
+    <main class="deck" aria-live="polite" data-background="vehicle-cockpit-background">
+      <section class="slide cover is-active" data-slide="1">
+        <div class="section-kicker">$ powermem init --scenario smart-ev-cockpit</div>
+        <h1 class="cursor-blink">PowerMem × Smart EV Cockpit</h1>
+        <p class="lead">
+          先讲清 PowerMem 的记忆设计与可量化优势，再落到智能座舱场景，
+          最后用 smart-ev-cockpit demo 证明链路可落地。
+        </p>
+        <div class="mini-metrics">
+          <span><b>Accurate</b>结构化抽取与多路召回</span>
+          <span><b>Agile</b>按需检索、降低延迟</span>
+          <span><b>Affordable</b>Token 开销可规模化</span>
+          <span><b>Governed</b>权限、生命周期与审计</span>
+        </div>
+        <div class="topic">00 / Opening</div>
+        <div class="slide-number">№ 01 / 23</div>
+      </section>
+
+      <section class="slide wow-slide" data-slide="2">
+        <div class="section-kicker">$ powermem --benchmark</div>
+        <h2>LOCOMO：可量化的记忆优势</h2>
+        <p class="section-lead">Accurate · Agile · Affordable —— 不是口号，是对照基线可复现的数字。</p>
+        <div class="bench-grid">
+          <div class="bench-card">
+            <div class="tag-row"><span class="tag ok">accurate</span></div>
+            <span class="delta">+65.9%</span>
+            <span class="delta-label">准确率提升</span>
+            <span class="delta-sub">87.79% vs 基线 52.9% · 结构化抽取 + 多路召回让命中更贴近意图</span>
+            <div class="bench-bar" style="--w: 88%"><i></i></div>
+          </div>
+          <div class="bench-card">
+            <div class="tag-row"><span class="tag ok">agile</span></div>
+            <span class="delta">-91.6%</span>
+            <span class="delta-label">p95 延迟下降</span>
+            <span class="delta-sub">1.44s vs 基线 17.12s · 只注入相关记忆，避免全历史回放</span>
+            <div class="bench-bar" style="--w: 92%"><i></i></div>
+          </div>
+          <div class="bench-card">
+            <div class="tag-row"><span class="tag warn">affordable</span></div>
+            <span class="delta">-96.5%</span>
+            <span class="delta-label">Token 开销下降</span>
+            <span class="delta-sub">~0.9k vs 基线 26k · 记忆资产化后，上下文成本可规模化</span>
+            <div class="bench-bar" style="--w: 96%"><i></i></div>
+          </div>
+        </div>
+        <div class="wow-footer">
+          <span class="tag ok">$ bench locomo</span>
+          <span class="tag">experience + skill 双层蒸馏</span>
+          <span class="tag">4-way hybrid retrieval</span>
+          <span class="tag">LLM self-merge</span>
+        </div>
+        <div class="topic">01 / Benchmark</div>
+        <div class="slide-number">№ 02 / 23</div>
+      </section>
+
+
+      <section class="slide" data-slide="3">
+        <div class="section-kicker">$ diagnose --need memory</div>
+        <h2>AI 应用为什么需要记忆</h2>
+        <p class="section-lead">长期记忆不是聊天记录缓存，而是让应用跨会话、跨用户、跨 Agent 保持连续认知的基础设施。</p>
+        <div class="compare">
+          <div>
+            <h3>没有记忆的 AI</h3>
+            <ul>
+              <li>跨会话后上下文断裂，无法维持连续认知。</li>
+              <li>多用户和多 Agent 场景中，经验无法复用。</li>
+              <li>个性化只能依赖当次 prompt，产品体验反复归零。</li>
+              <li>长上下文越堆越贵，模型注意力会被无关历史稀释。</li>
+            </ul>
+          </div>
+          <div>
+            <h3>有记忆的 AI</h3>
+            <ul>
+              <li>把事实、偏好、关系、策略转化为可检索资产。</li>
+              <li>通过用户、Agent、scope、metadata 管理可见性。</li>
+              <li>让助手从“会回答”进化为“会记住、会更新、会遗忘”。</li>
+              <li>把高价值信息从 prompt 中抽离，按需检索、按证据采用。</li>
+            </ul>
+          </div>
+        </div>
+        <div class="topic">01 / PowerMem capability</div>
+        <div class="slide-number">№ 03 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="4">
+        <div class="section-kicker">$ describe powermem --role infra</div>
+        <h2>PowerMem 是 AI 应用的记忆基础设施</h2>
+        <p class="section-lead">它不替代 LLM，而是在应用侧提供可控、可审计、可检索、可更新的长期记忆层。</p>
+        <div class="cards four">
+          <div class="card"><strong>Accurate</strong><span>结构化抽取、去重、冲突处理和多路召回，让记忆命中更贴近真实意图。</span></div>
+          <div class="card"><strong>Agile</strong><span>只把相关记忆送入上下文，避免全历史回放带来的延迟和注意力浪费。</span></div>
+          <div class="card"><strong>Affordable</strong><span>减少 token 输入，降低长上下文成本，让个性化能力更容易规模化。</span></div>
+          <div class="card accent-card"><strong>Governed</strong><span>权限、生命周期、审计和删除机制让记忆可运营，而不是不可控的数据堆。</span></div>
+        </div>
+        <div class="topic">01 / PowerMem capability</div>
+        <div class="slide-number">№ 04 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="5">
+        <div class="section-kicker">$ ls capabilities/</div>
+        <h2>PowerMem 能力全景</h2>
+        <p class="section-lead">从记忆写入到检索采用，再到治理、集成、观测，PowerMem 覆盖的是一条完整工程链路。</p>
+        <div class="grid-eight">
+          <div class="cell"><strong>Memory Item 数据模型</strong><span>内容、类型、用户、Agent、scope、metadata、embedding、生命周期状态。</span></div>
+          <div class="cell"><strong>写入抽取</strong><span>从对话、事件、文件或多模态描述中提取可长期复用的事实。</span></div>
+          <div class="cell"><strong>去重合并</strong><span>识别重复、近似、冲突和覆盖关系，避免记忆越写越脏。</span></div>
+          <div class="cell"><strong>混合检索</strong><span>语义向量、全文关键词、结构化过滤和图关系组合召回。</span></div>
+          <div class="cell"><strong>生命周期</strong><span>active、archived、deleted、decayed、retention score 与访问强化。</span></div>
+          <div class="cell"><strong>权限隐私</strong><span>private/shared、tenant、user、agent、masking、projection、audit。</span></div>
+          <div class="cell"><strong>开发集成</strong><span>SDK、MCP、HTTP API、CLI、Dashboard、Observability。</span></div>
+          <div class="cell"><strong>评估指标</strong><span>准确率、延迟、token savings、命中质量、审计覆盖率。</span></div>
+        </div>
+        <div class="topic">01 / PowerMem capability</div>
+        <div class="slide-number">№ 05 / 23</div>
+      </section>
+
+      <section class="slide wow-slide" data-slide="6">
+        <div class="section-kicker">$ cat design/principles.md</div>
+        <h2>设计四律：可执行的产品原则</h2>
+        <p class="section-lead">把记忆做成基础设施，而不是又一层 prompt 缓存。</p>
+        <div class="principle-grid">
+          <div class="principle-card">
+            <div class="cmd">$ principle --name accurate</div>
+            <strong>Accurate</strong>
+            <span>抽取 → 去重 → 冲突处理 → 多路召回。记忆命中要对齐真实意图，而不是模糊相似。</span>
+            <span class="tag ok">extract · dedupe · recall</span>
+          </div>
+          <div class="principle-card">
+            <div class="cmd">$ principle --name agile</div>
+            <strong>Agile</strong>
+            <span>按需检索、按证据采用。只把相关记忆送入上下文，保护延迟与注意力带宽。</span>
+            <span class="tag ok">retrieve · inject · reason</span>
+          </div>
+          <div class="principle-card">
+            <div class="cmd">$ principle --name affordable</div>
+            <strong>Affordable</strong>
+            <span>用记忆资产替代长上下文堆叠，把个性化从「烧 token」变成「可规模化」。</span>
+            <span class="tag warn">token · cost · scale</span>
+          </div>
+          <div class="principle-card accent">
+            <div class="cmd">$ principle --name governed</div>
+            <strong>Governed</strong>
+            <span>权限、生命周期、审计、删除。记忆必须可运营，而不是不可控的数据堆。</span>
+            <span class="tag err">scope · privacy · audit</span>
+          </div>
+        </div>
+        <div class="topic">01 / Design principles</div>
+        <div class="slide-number">№ 06 / 23</div>
+      </section>
+
+
+      <section class="slide" data-slide="7">
+        <div class="section-kicker">$ powermem --architecture</div>
+        <h2>PowerMem 总体架构</h2>
+        <p class="section-lead">接入、Core 记忆引擎、模型、存储、混合检索和治理分层清晰。</p>
+        <div class="deck-architecture architecture-board">
+          <div class="arch-stack">
+            <div class="arch-panel">
+              <strong>接入层</strong>
+              <span>Python SDK / MCP / HTTP API Server / CLI / Dashboard 面向应用、Agent 和工具统一暴露记忆能力。</span>
+            </div>
+            <div class="chip-grid">
+              <div class="chip">Python SDK</div>
+              <div class="chip">MCP</div>
+              <div class="chip">HTTP API Server</div>
+              <div class="chip">CLI / pmem</div>
+              <div class="chip">Dashboard</div>
+              <div class="chip">App / Agent</div>
+            </div>
+            <div class="arch-panel">
+              <strong>模型层</strong>
+              <span>Embedding / LLM: GPT、Qwen、DeepSeek 和多模态描述生成共同服务抽取、改写和重排。</span>
+            </div>
+          </div>
+          <div class="arch-core">
+            <h3>Core 记忆引擎</h3>
+            <div class="chip-grid">
+              <div class="chip">智能记忆处理器</div>
+              <div class="chip">记忆新增</div>
+              <div class="chip">记忆更新</div>
+              <div class="chip">冲突检测</div>
+              <div class="chip">记忆压缩</div>
+              <div class="chip">生命周期管理</div>
+            </div>
+            <div class="chip-grid five">
+              <div class="chip">工作记忆</div>
+              <div class="chip">短期记忆</div>
+              <div class="chip">长期记忆</div>
+              <div class="chip">私有记忆</div>
+              <div class="chip">共享记忆</div>
+            </div>
+            <div class="proof-bar">
+              <div class="proof-item"><b>Accurate +65.90%</b>87.79% vs 52.9%</div>
+              <div class="proof-item"><b>Agile 91.83%</b>1.44s vs 17.12s p95</div>
+              <div class="proof-item"><b>Affordable 96.53%</b>0.9k vs 26k tokens</div>
+            </div>
+          </div>
+          <div class="arch-stack">
+            <div class="arch-panel accent-panel">
+              <strong>混合检索</strong>
+              <span>向量 / 全文 / 知识图谱 / 多跳图遍历 / Sub Stores 共同决定进入上下文的记忆。</span>
+            </div>
+            <div class="arch-panel">
+              <strong>存储层</strong>
+              <span>seekdb / OceanBase / sqlite 承载向量、文本、图关系、metadata 和用户画像表。</span>
+            </div>
+            <div class="arch-panel">
+              <strong>治理与观测</strong>
+              <span>scope、permission、privacy、lifecycle、audit 和 trace 把记忆从缓存变成基础设施。</span>
+            </div>
+          </div>
+        </div>
+        <div class="topic">01 / PowerMem capability</div>
+        <div class="slide-number">№ 07 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="8">
+        <div class="section-kicker">$ schema memory_item</div>
+        <h2>Memory Item 数据模型</h2>
+        <p class="section-lead">一条 memory 不是一句话，而是一组可过滤、可召回、可治理、可解释的数据字段。</p>
+        <div class="grid-eight">
+          <div class="cell"><strong>content</strong><span>被压缩后的事实、偏好、关系、策略或能力边界。</span></div>
+          <div class="cell"><strong>memory_kind</strong><span>preference、profile、capability、episode、policy、routine。</span></div>
+          <div class="cell"><strong>scope</strong><span>user_id、agent_id、tenant、session、vehicle_id 等可见性边界。</span></div>
+          <div class="cell"><strong>metadata</strong><span>时间、来源、置信度、标签、业务字段，用于过滤和审计。</span></div>
+          <div class="cell"><strong>embedding</strong><span>语义检索索引，让不同表达能命中同一类经验。</span></div>
+          <div class="cell"><strong>graph edges</strong><span>实体、关系、事件、地点、车辆之间的可解释连接。</span></div>
+          <div class="cell"><strong>lifecycle</strong><span>active、archived、deleted、decayed、valid_until、retention_score。</span></div>
+          <div class="cell"><strong>provenance</strong><span>source event、trace_id、operation log，支撑回放和治理。</span></div>
+        </div>
+        <div class="topic">01 / PowerMem capability</div>
+        <div class="slide-number">№ 08 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="9">
+        <div class="section-kicker">$ pipeline write --trace</div>
+        <h2>写入链路：提取、归一、去重</h2>
+        <p class="section-lead">参考原 PPT 的智能记忆提取、多模态输入和用户画像流程：写入先判断动作，再沉淀 memory item 与 profile。</p>
+        <div class="flow-board">
+          <div class="source-strip">
+            <div class="source-chip"><strong>NOMI dialogue log</strong><span>query / tts_text / session_turn / sound_location / is_child_voice</span></div>
+            <div class="source-chip"><strong>SOA vehicle state</strong><span>HVAC / seat / SOC / range / commands / SOA validation</span></div>
+            <div class="source-chip"><strong>Vehicle basic information</strong><span>model / city / NOMI version / un_support_funcs / vehicle profile</span></div>
+          </div>
+          <div class="flow-row four">
+            <div class="flow-node"><strong>原始信息 / 多模态输入</strong><span>文本、图像、音频、车辆事件和工具结果进入统一 capture。</span></div>
+            <div class="flow-node"><strong>LLM / ASR</strong><span>图像与音频先生成文本描述，对话和 SOA 字段进入结构化 prompt。</span></div>
+            <div class="flow-node"><strong>事实与实体关系抽取</strong><span>抽取实体、关系、偏好、策略、能力边界和座舱动作线索。</span></div>
+            <div class="flow-node accent-node"><strong>向量 Embedding</strong><span>为事实、profile、relationship 和 episode 建立语义索引。</span></div>
+          </div>
+          <div class="flow-row four">
+            <div class="flow-node"><strong>已有记忆检索</strong><span>按 user_id、actor_id、seat_position、vehicle_id 和 privacy scope 找相似记忆。</span></div>
+            <div class="flow-node accent-node"><strong>LLM 判定 Actions</strong><span>结合新输入与已有记忆决定新增、更新、删除或保持不变。</span></div>
+            <div class="flow-node"><strong>ADD / UPDATE / DELETE / NONE</strong><span>所有动作记录 trace_id、source event、before/after 和操作原因。</span></div>
+            <div class="flow-node"><strong>Memory Item + User Profile</strong><span>用户画像独立更新，并可在后续检索中与长期记忆联合召回。</span></div>
+          </div>
+          <div class="chip-grid">
+            <div class="chip">query</div>
+            <div class="chip">tts_text</div>
+            <div class="chip">sound_location</div>
+            <div class="chip">is_child_voice</div>
+            <div class="chip">commands</div>
+            <div class="chip">SOA validation</div>
+          </div>
+        </div>
+        <div class="topic">01 / PowerMem capability</div>
+        <div class="slide-number">№ 09 / 23</div>
+      </section>
+
+      <section class="slide wow-slide" data-slide="10">
+        <div class="section-kicker">$ powermem pipeline --watch</div>
+        <h2>记忆流水线：从捕获到遗忘</h2>
+        <p class="section-lead">一条可审计的闭环：写入判定、混合检索、生命周期衰减在同一条链路上运转。</p>
+        <div class="pipeline-board">
+          <div class="pipeline-track">
+            <div class="pipe-step">
+              <b>01</b>
+              <strong>Capture</strong>
+              <span>对话 / SOA / 多模态事件进入统一 capture。</span>
+            </div>
+            <div class="pipe-step">
+              <b>02</b>
+              <strong>Extract</strong>
+              <span>LLM 抽取事实、偏好、关系与能力边界。</span>
+            </div>
+            <div class="pipe-step">
+              <b>03</b>
+              <strong>Decide</strong>
+              <span>对照已有记忆判定 ADD / UPDATE / DELETE / NONE。</span>
+            </div>
+            <div class="pipe-step">
+              <b>04</b>
+              <strong>Retrieve</strong>
+              <span>向量 + 全文 + 图关系并行召回，再融合排序。</span>
+            </div>
+            <div class="pipe-step">
+              <b>05</b>
+              <strong>Decay</strong>
+              <span>Ebbinghaus 衰减与访问强化，低价值记忆退出活跃层。</span>
+            </div>
+          </div>
+          <div class="pipeline-sub">
+            <div class="term-window">
+              <div class="term-chrome">
+                <span class="term-dot err"></span>
+                <span class="term-dot warn"></span>
+                <span class="term-dot ok"></span>
+                decide.actions
+              </div>
+              <div class="term-body">
+                <div class="tag-row" style="margin-top:0">
+                  <span class="tag ok">ADD</span>
+                  <span class="tag warn">UPDATE</span>
+                  <span class="tag err">DELETE</span>
+                  <span class="tag">NONE</span>
+                </div>
+                <p class="body-text" style="margin-top:14px">每种动作绑定 trace_id、source event、before/after 与操作原因，可回放、可审计。</p>
+              </div>
+            </div>
+            <div class="term-window">
+              <div class="term-chrome">
+                <span class="term-dot err"></span>
+                <span class="term-dot warn"></span>
+                <span class="term-dot ok"></span>
+                retrieve.hybrid
+              </div>
+              <div class="term-body">
+                <div class="tag-row" style="margin-top:0">
+                  <span class="tag ok">vector</span>
+                  <span class="tag ok">full-text</span>
+                  <span class="tag ok">graph</span>
+                  <span class="tag warn">rerank</span>
+                </div>
+                <p class="body-text" style="margin-top:14px">并行取证后 RRF / rerank，输出 selected_memory_ids + scores + reason_code。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="topic">01 / Memory pipeline</div>
+        <div class="slide-number">№ 10 / 23</div>
+      </section>
+
+
+      <section class="slide" data-slide="11">
+        <div class="section-kicker">$ ops ADD UPDATE MERGE DELETE</div>
+        <h2>ADD / UPDATE / MERGE / DELETE</h2>
+        <p class="section-lead">PowerMem 管的是记忆生命周期，不只是新增和搜索。每种操作都要能被审计、回放和业务约束。</p>
+        <div class="grid-eight">
+          <div class="cell"><strong>ADD</strong><span>从原始输入抽取结构化偏好、事实、关系和策略。</span></div>
+          <div class="cell"><strong>SEARCH</strong><span>按 query、user、agent、tenant、metadata、visibility 找到相关记忆。</span></div>
+          <div class="cell"><strong>UPDATE</strong><span>新事实修正旧事实时更新内容、metadata、scope 或 lifecycle。</span></div>
+          <div class="cell"><strong>MERGE</strong><span>近似记忆合并为更稳定的长期表达，保留 provenance。</span></div>
+          <div class="cell"><strong>ARCHIVE</strong><span>低价值、阶段性、过期记忆退出活跃检索空间。</span></div>
+          <div class="cell"><strong>DELETE</strong><span>用户要求删除或隐私策略要求清理时，产生可审计操作。</span></div>
+          <div class="cell"><strong>RESET</strong><span>面向测试、demo 和回放重建可复现记忆环境。</span></div>
+          <div class="cell"><strong>AUDIT</strong><span>记录 request、selected ids、decision reason、before/after status。</span></div>
+        </div>
+        <div class="topic">01 / PowerMem capability</div>
+        <div class="slide-number">№ 11 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="12">
+        <div class="section-kicker">$ search --hybrid</div>
+        <h2>语义向量 + 全文关键词 + 图关系</h2>
+        <p class="section-lead">参考原 PPT 的混合检索、多跳图遍历和 seekdb 混搜架构：召回不是一路搜索，而是并行取证后排序融合。</p>
+        <div class="flow-board">
+          <div class="flow-row four">
+            <div class="flow-node accent-node"><strong>Query rewrite + filters</strong><span>把“有点冷”改写为座舱舒适意图，同时保留 actor、seat、vehicle 和隐私范围。</span></div>
+            <div class="flow-node"><strong>Vector semantic retrieval</strong><span>召回语义相近的偏好、例程、关系和能力边界。</span></div>
+            <div class="flow-node"><strong>Full-text keyword retrieval</strong><span>用字段名、地点、车型、命令和业务术语补足精确匹配。</span></div>
+            <div class="flow-node"><strong>Knowledge graph / multi-hop SQL</strong><span>沿用户、车辆、地点、家庭关系和事件做有限多跳解释。</span></div>
+          </div>
+          <div class="flow-row four">
+            <div class="flow-node"><strong>Structured metadata filters</strong><span>actor_id / seat_position / vehicle_id / agent_id / tenant / privacy visibility</span></div>
+            <div class="flow-node accent-node"><strong>hybrid rank / RRF / rerank</strong><span>融合向量、全文、图关系、recency、retention 和 permission。</span></div>
+            <div class="flow-node"><strong>selected_memory_ids</strong><span>输出命中的 memory ids、scores、metadata 和 reason evidence。</span></div>
+            <div class="flow-node"><strong>context injection + reason code</strong><span>只把相关记忆注入当前 LLM 上下文，并保留 reason_code。</span></div>
+          </div>
+          <div class="chip-grid">
+            <div class="chip">actor_id</div>
+            <div class="chip">seat_position</div>
+            <div class="chip">vehicle_id</div>
+            <div class="chip">agent_id</div>
+            <div class="chip">tenant</div>
+            <div class="chip">privacy visibility</div>
+          </div>
+        </div>
+        <div class="topic">01 / PowerMem capability</div>
+        <div class="slide-number">№ 12 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="13">
+        <div class="section-kicker">$ lifecycle --ebbinghaus</div>
+        <h2>Ebbinghaus 生命周期与遗忘治理</h2>
+        <p class="section-lead">参考原 PPT 的艾宾浩斯遗忘管理：记忆按重要性进入不同层，访问强化会减缓衰减，低价值记忆自动退出活跃空间。</p>
+        <div class="lifecycle-board flow-lifecycle">
+          <div class="flow-row four">
+            <div class="flow-node accent-node"><strong>信息输入</strong><span>对话、工具事件、SOA 状态、用户画像和车辆档案进入候选记忆池。</span></div>
+            <div class="flow-node"><strong>重要性评分</strong><span>综合来源可信度、业务类型、用户反馈、访问频次和隐私等级。</span></div>
+            <div class="flow-node"><strong>访问强化</strong><span>frequent access 提升 memory strength，使短期偏好有机会进入长期层。</span></div>
+            <div class="flow-node"><strong>遗忘衰减 / 自动清理</strong><span>低访问、低价值、过期记忆降权、归档或删除。</span></div>
+          </div>
+          <div class="memory-levels">
+            <div class="memory-level">
+              <b>Working Memory &lt; 0.6</b>
+              <strong>快速衰减</strong>
+              <span>临时上下文、当前 session 目标和一次性任务，适合“再低一点”这类短程指代。</span>
+            </div>
+            <div class="memory-level">
+              <b>Short-term Memory 0.6-0.8</b>
+              <strong>中等衰减</strong>
+              <span>近期有效事实和阶段性偏好，例如出差期间临时空调温度。</span>
+            </div>
+            <div class="memory-level">
+              <b>Long-term Memory &gt;= 0.8</b>
+              <strong>慢速衰减</strong>
+              <span>稳定偏好、身份画像、车辆能力边界、安全策略和家庭关系。</span>
+            </div>
+          </div>
+          <div class="equation-strip">
+            <div class="source-chip"><strong>R(t) = e^(-t/S)</strong><span>用时间和稳定性建模自然遗忘，旧记忆默认降低检索优先级。</span></div>
+            <div class="source-chip"><strong>final_score = relevance_score × decay_factor</strong><span>检索时同时考虑相关性、衰减因子、访问强化、权限和 visibility。</span></div>
+          </div>
+        </div>
+        <div class="topic">01 / PowerMem capability</div>
+        <div class="slide-number">№ 13 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="14">
+        <div class="section-kicker">$ govern --multi-agent --privacy</div>
+        <h2>多用户、Multi-Agent 与权限与隐私治理</h2>
+        <p class="section-lead">作用域、权限、协作和隐私保护是多用户座舱的核心边界。</p>
+        <div class="architecture-board">
+          <div class="arch-stack">
+            <div class="arch-panel accent-panel">
+              <strong>AgentMemory 抽象层</strong>
+              <span>自动检测 single-user、multi-user、multi-agent 模式，并向上提供一致 API。</span>
+            </div>
+            <div class="arch-panel">
+              <strong>Multi-Agent Manager</strong>
+              <span>为 NOMI、车控、媒体、导航等 Agent 管理独立记忆空间。</span>
+            </div>
+            <div class="arch-panel">
+              <strong>Multi-User Manager</strong>
+              <span>区分主驾、副驾、后排儿童和家庭共享范围。</span>
+            </div>
+          </div>
+          <div class="arch-core">
+            <h3>Governance Controllers</h3>
+            <div class="chip-grid">
+              <div class="chip">ScopeController</div>
+              <div class="chip">PermissionController</div>
+              <div class="chip">CollaborationCoordinator</div>
+              <div class="chip">PrivacyProtector</div>
+              <div class="chip">Projection</div>
+              <div class="chip">Audit</div>
+            </div>
+            <div class="arch-panel accent-panel">
+              <strong>座舱映射</strong>
+              <span>driver / passenger / child / vehicle / family scope 决定谁能查、谁能写、谁能执行动作。</span>
+            </div>
+          </div>
+          <div class="arch-stack">
+            <div class="arch-panel">
+              <strong>上下文输出</strong>
+              <span>private memory / shared memory / instructions / knowledge / tools / history。</span>
+            </div>
+            <div class="chip-grid">
+              <div class="chip">private memory</div>
+              <div class="chip">shared memory</div>
+              <div class="chip">instructions</div>
+              <div class="chip">knowledge</div>
+              <div class="chip">tools</div>
+              <div class="chip">history</div>
+            </div>
+            <div class="arch-panel">
+              <strong>隐私投影</strong>
+              <span>前端和下游 Agent 只看到 masked projection，不直接暴露原始敏感记忆。</span>
+            </div>
+          </div>
+        </div>
+        <div class="topic">01 / PowerMem capability</div>
+        <div class="slide-number">№ 14 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="15">
+        <div class="section-kicker">$ integrate --sdk --mcp --http --cli</div>
+        <h2>SDK / MCP / HTTP / CLI 到可观测运行</h2>
+        <p class="section-lead">PowerMem 不只是一段库代码，而是一套可以被开发、调试、部署、观察和替换的工程组件。</p>
+        <div class="grid-eight">
+          <div class="cell"><strong>SDK / MCP / HTTP / CLI</strong><span>本地库、工具协议、服务化接口和命令行都能接入同一记忆层。</span></div>
+          <div class="cell"><strong>Dashboard / Observability</strong><span>查看命中、操作、生命周期、trace 和检索质量，便于调试 demo 与生产。</span></div>
+          <div class="cell"><strong>存储与模型可插拔</strong><span>SQLite、seekdb、OceanBase；LLM、Embedding、Rerank 可按环境替换。</span></div>
+          <div class="cell"><strong>多模态记忆</strong><span>图片、文档、音视频先转结构化描述，再进入统一 memory item。</span></div>
+          <div class="cell"><strong>开发者最短路径</strong><span><span class="mono">memory.add</span>、<span class="mono">memory.search</span>、<span class="mono">memory.update</span>、<span class="mono">memory.delete</span>。</span></div>
+          <div class="cell"><strong>评估指标</strong><span>准确率、延迟、token savings、命中覆盖、误召回、审计覆盖率。</span></div>
+          <div class="cell"><strong>测试回放</strong><span>dataset、seed、reset、trace export 帮助复现每次演示行为。</span></div>
+          <div class="cell"><strong>开源协议</strong><span>Apache 许可，适合二次集成、企业内部署和教学 demo。</span></div>
+        </div>
+        <div class="topic">01 / PowerMem capability</div>
+        <div class="slide-number">№ 15 / 23</div>
+      </section>
+
+      <section class="slide dark" data-slide="16">
+        <div class="section-kicker">$ cd scenarios/smart-ev-cockpit</div>
+        <h2>PowerMem 在智能座舱中的能力</h2>
+        <p class="section-lead">智能座舱不是单用户聊天。它同时面对驾驶员、乘客、儿童、座位、车辆状态、安全策略和隐私边界。</p>
+        <div class="cards four">
+          <div class="card"><strong>乘员记忆</strong><span>按 actor_id、seat_position、user_id 绑定偏好，避免主驾和乘客混用。</span></div>
+          <div class="card"><strong>车辆记忆</strong><span>车控能力、驾驶模式、HVAC、座椅、SOC 等状态与偏好共同决策。</span></div>
+          <div class="card"><strong>情境记忆</strong><span>地点、媒体、关系、行程和历史事件被脱敏后参与推荐。</span></div>
+          <div class="card accent-card"><strong>安全记忆</strong><span>儿童媒体、安全策略、车辆能力边界和隐私投影决定可执行动作。</span></div>
+        </div>
+        <div class="topic">02 / Smart EV Cockpit</div>
+        <div class="slide-number">№ 16 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="17">
+        <div class="section-kicker">$ model cockpit-memory</div>
+        <h2>座舱记忆模型</h2>
+        <div class="diagram">
+          <div class="diagram-node wide">
+            <h3>乘员上下文</h3>
+            <p class="body-text">actor_id、user_id、seat_position 区分主驾、前排乘客和后排儿童。</p>
+          </div>
+          <div class="diagram-node wide">
+            <h3>车辆上下文</h3>
+            <p class="body-text">vehicle_id、SOC、续航、HVAC、座椅、驾驶模式构成实时状态。</p>
+          </div>
+          <div class="diagram-node wide">
+            <h3>记忆类型</h3>
+            <p class="body-text">cabin_control、driving_preference、location_episode、media_preference、relationship_event、safety_policy。</p>
+          </div>
+          <div class="diagram-node wide">
+            <h3>治理字段</h3>
+            <p class="body-text">privacy_level、visibility、retention_policy、retention_score、lifecycle_status。</p>
+          </div>
+        </div>
+        <div class="topic">02 / Smart EV Cockpit</div>
+        <div class="slide-number">№ 17 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="18">
+        <div class="section-kicker">$ demo act 1-3 --personalize</div>
+        <h2>个性化车控从偏好沉淀到动作执行</h2>
+        <p class="section-lead">座舱 demo 验证完整闭环：同一句话先经过身份、座位、策略和车辆能力边界，再变成可审计的 SOA vehicle state diff。</p>
+        <div class="business-loop">
+          <div class="arch-stack">
+            <div class="source-chip"><strong>NOMI dialogue log</strong><span>utterance、tts_text、session_id、session_turn、sound_location、is_child_voice。</span></div>
+            <div class="source-chip"><strong>SOA vehicle state</strong><span>车内外温度、座椅、方向盘加热、SOC、续航、座位占用和 commands。</span></div>
+            <div class="source-chip"><strong>Vehicle basic information</strong><span>车型、城市、平台版本、NOMI 版本、不支持技能和车辆能力边界。</span></div>
+          </div>
+          <div class="flow-stack">
+            <div class="loop-map">
+              <div class="flow-node"><strong>NOMI utterance</strong><span>“有点冷”进入座舱意图识别。</span></div>
+              <div class="flow-node"><strong>actor / seat / child voice recognition</strong><span>识别主驾、副驾、后排儿童和座位占用。</span></div>
+              <div class="flow-node accent-node"><strong>PowerMem retrieval</strong><span>命中偏好、例程、安全策略和车辆能力记忆。</span></div>
+              <div class="flow-node"><strong>policy and vehicle capability guard</strong><span>儿童、安全、车型能力和隐私投影优先于个性化。</span></div>
+              <div class="flow-node"><strong>recommendation</strong><span>生成可解释建议，绑定 selected_memory_ids 和 reason_code。</span></div>
+              <div class="flow-node accent-node"><strong>SOA vehicle state diff</strong><span>输出 HVAC、seat heat、steering heat 的 before/after patch。</span></div>
+              <div class="flow-node"><strong>memory writeback / reinforcement</strong><span>接受、拒绝、执行结果会强化或衰减相关记忆。</span></div>
+              <div class="flow-node"><strong>evidence</strong><span>Presenter 和 Developer Evidence Mode 使用同一份后端响应。</span></div>
+            </div>
+            <div class="flow-row four">
+              <div class="flow-node"><strong>主驾</strong><span>26C + seat heat 2 + steering heat，来自冬季长期偏好。</span></div>
+              <div class="flow-node"><strong>副驾</strong><span>raise temp only，不复用主驾座椅加热偏好。</span></div>
+              <div class="flow-node"><strong>儿童</strong><span>warm rear row + front-seat confirmation，车辆控制需前排确认。</span></div>
+              <div class="flow-node accent-node"><strong>同句不同人</strong><span>同一句“有点冷”因 actor、seat 和 policy 得到不同响应。</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="topic">02 / Smart EV Cockpit</div>
+        <div class="slide-number">№ 18 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="19">
+        <div class="section-kicker">$ demo act 4-7 --boundary --privacy</div>
+        <h2>车辆边界、地点媒体与隐私保护</h2>
+        <div class="grid-eight">
+          <div class="cell"><strong>能力边界</strong><span>“支持小憩模式吗？”检索 vehicle_capability，不支持就不执行。</span></div>
+          <div class="cell"><strong>地点回忆</strong><span>“上周五那家餐厅。”返回区域级目的地，不展示精确地址。</span></div>
+          <div class="cell"><strong>儿童媒体</strong><span>结合 child profile、media_preference 和 safety_policy 选择内容。</span></div>
+          <div class="cell"><strong>关系事件</strong><span>纪念日、家庭关系可参与建议，但日期和身份字段可 mask。</span></div>
+          <div class="cell"><strong>Projection</strong><span>前端显示的是投影结果，不把原始私密 memory 完整暴露。</span></div>
+          <div class="cell"><strong>Safety policy</strong><span>儿童内容、驾驶安全、车辆能力边界优先于个性化偏好。</span></div>
+          <div class="cell"><strong>Reason code</strong><span>每个推荐有 reason_code，证明来源于哪类记忆和状态。</span></div>
+          <div class="cell"><strong>No fake hit</strong><span>没有 PowerMem 命中时，前端不伪造 memory hits。</span></div>
+        </div>
+        <div class="topic">02 / Smart EV Cockpit</div>
+        <div class="slide-number">№ 19 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="20">
+        <div class="section-kicker">$ demo act 8-10 --proactive</div>
+        <h2>车辆状态让记忆变成主动关怀</h2>
+        <div class="metric-row">
+          <div class="metric">
+            <b>SOC</b>
+            <em>低电量事件</em>
+            <span>Act 9 不是普通 utterance，而是车辆事件接口触发。</span>
+          </div>
+          <div class="metric">
+            <b>42km</b>
+            <em>续航上下文</em>
+            <span>range_km 进入 evidence，作为推荐原因的一部分。</span>
+          </div>
+          <div class="metric">
+            <b>Mode</b>
+            <em>驾驶建议</em>
+            <span>结合 driving_preference、emotional_preference 和当前路况。</span>
+          </div>
+          <div class="metric">
+            <b>Day90</b>
+            <em>生命周期回顾</em>
+            <span>短期事实衰减，长期偏好保留，删除和归档可回放。</span>
+          </div>
+        </div>
+        <div class="topic">02 / Smart EV Cockpit</div>
+        <div class="slide-number">№ 20 / 23</div>
+      </section>
+
+      <section class="slide dark" data-slide="21">
+        <div class="section-kicker">$ tree smart-ev-cockpit</div>
+        <h2>smart-ev-cockpit demo 项目</h2>
+        <p class="section-lead">demo 的目标是证明 PowerMem 能力真实经过后端 SDK 边界，而不是前端 mock 一段看起来合理的回答。</p>
+        <div class="architecture-board">
+          <div class="arch-stack">
+            <div class="arch-panel accent-panel">
+              <strong>Frontend</strong>
+              <span>Vite + React / Presenter Mode / Developer Evidence Mode / vehicle stage / state diff。</span>
+            </div>
+            <div class="arch-panel">
+              <strong>显示原则</strong>
+              <span>前端只渲染后端证据和 privacy projection。</span>
+            </div>
+          </div>
+          <div class="arch-core">
+            <h3>Backend FastAPI</h3>
+            <div class="chip-grid">
+              <div class="chip">scenario orchestration</div>
+              <div class="chip">privacy projection</div>
+              <div class="chip">vehicle patch generation</div>
+              <div class="chip">reason code</div>
+              <div class="chip">trace evidence</div>
+              <div class="chip">live-mode guard</div>
+            </div>
+            <div class="arch-panel accent-panel">
+              <strong>PowerMem SDK boundary</strong>
+              <span>memory.add/search/update/delete、lifecycle、selected memory evidence 都从后端 SDK 边界产生。</span>
+            </div>
+          </div>
+          <div class="arch-stack">
+            <div class="arch-panel">
+              <strong>Storage / Model</strong>
+              <span>seekdb / sqlite / OceanBase + embedding + LLM，支撑向量、全文、图关系和元数据过滤。</span>
+            </div>
+            <div class="arch-panel">
+              <strong>Scenario Data</strong>
+              <span>NOMI dialogue logs / SOA state / vehicle profile / generated family scenes。</span>
+            </div>
+            <div class="arch-panel">
+              <strong>Artifact</strong>
+              <span>scenarios/smart-ev-cockpit/frontend/public/powermem-smart-ev-cockpit-deck.html</span>
+            </div>
+          </div>
+        </div>
+        <div class="topic">03 / Demo project</div>
+        <div class="slide-number">№ 21 / 23</div>
+      </section>
+
+      <section class="slide" data-slide="22">
+        <div class="section-kicker">$ evidence --trace</div>
+        <h2>Evidence Trace 证明链路真实</h2>
+        <p class="section-lead">Presenter Mode 和 Developer Evidence Mode 使用同一份后端响应。PowerMem 未连接时，界面显示 live-mode 错误，不继续编造。</p>
+        <div class="swimlane-board">
+          <div class="lane-label">Trace stage</div>
+          <div class="lane-card accent-lane"><strong>Request</strong><span>request_id / actor / seat / utterance / session / latency</span></div>
+          <div class="lane-card"><strong>Privacy</strong><span>redaction_count / hidden_fields / masked projection / visibility</span></div>
+          <div class="lane-card accent-lane"><strong>Retrieval</strong><span>query / filters / memory_ids / scores / metadata</span></div>
+          <div class="lane-card"><strong>Decision</strong><span>selected_memory_ids / reason_code / recommendations</span></div>
+          <div class="lane-card accent-lane"><strong>Action</strong><span>vehicle_state_diff / before / after / command guard</span></div>
+          <div class="lane-card"><strong>Writeback</strong><span>ADD / UPDATE / MERGE / ARCHIVE / trace_id / lifecycle mutation</span></div>
+          <div class="lane-label">No fake hit</div>
+          <div class="lane-card"><strong>Live request</strong><span>没有 PowerMem 命中时，响应保留 empty hits 和错误状态。</span></div>
+          <div class="lane-card"><strong>Projection only</strong><span>前端展示的是脱敏投影，不展示原始敏感 memory content。</span></div>
+          <div class="lane-card"><strong>Backend source</strong><span>memory_ids 与 scores 只来自后端 SDK 调用结果。</span></div>
+          <div class="lane-card"><strong>Reasoned choice</strong><span>每条推荐都能回到 selected_memory_ids 和 reason_code。</span></div>
+          <div class="lane-card"><strong>Vehicle diff</strong><span>字段级 before/after 证明动作确实可执行。</span></div>
+          <div class="lane-card"><strong>Audit trail</strong><span>写入、归档和生命周期变更都绑定 trace_id。</span></div>
+        </div>
+        <div class="topic">03 / Demo project</div>
+        <div class="slide-number">№ 22 / 23</div>
+      </section>
+
+      <section class="slide cover" data-slide="23">
+        <div class="section-kicker">$ exit --summary</div>
+        <h1 class="cursor-blink">从会回答，到会记住、会治理、会证明</h1>
+        <p class="lead">
+          PowerMem 把长期记忆、隐私治理、生命周期和证据回放交给应用层可控的基础设施。智能座舱 demo
+          用多用户、多状态、多隐私边界的场景验证这套能力。
+        </p>
+        <div class="mini-metrics">
+          <span><b>Memory</b>结构化长期记忆资产</span>
+          <span><b>Search</b>混合检索与图关系解释</span>
+          <span><b>Govern</b>权限、隐私、生命周期</span>
+          <span><b>Evidence</b>可回放的 demo 证明链</span>
+        </div>
+        <div class="topic">04 / Summary</div>
+        <div class="slide-number">№ 23 / 23</div>
+      </section>
+    </main>
+    <div class="progress" aria-hidden="true"></div>
+    <script>
+      (() => {
+        const slides = Array.from(document.querySelectorAll(".slide"));
+        const total = slides.length;
+        const progress = document.querySelector(".progress");
+        let index = 0;
+
+        function parseHash() {
+          const match = location.hash.match(/slide-(\d+)/);
+          if (!match) return 0;
+          const parsed = Number(match[1]);
+          return Number.isFinite(parsed) ? Math.min(Math.max(parsed - 1, 0), total - 1) : 0;
+        }
+
+        function show(nextIndex, syncHash = true) {
+          index = Math.min(Math.max(nextIndex, 0), total - 1);
+          slides.forEach((slide, slideIndex) => {
+            const active = slideIndex === index;
+            slide.classList.toggle("is-active", active);
+            if (active && slide.classList.contains("wow-slide")) {
+              slide.querySelectorAll(".pipe-step, .bench-bar > i").forEach((el) => {
+                el.style.animation = "none";
+                void el.offsetWidth;
+                el.style.animation = "";
+              });
+            }
+          });
+          document.documentElement.style.setProperty(
+            "--progress",
+            `${((index + 1) / total) * 100}%`,
+          );
+          if (progress) {
+            progress.setAttribute("aria-label", `Slide ${index + 1} of ${total}`);
+          }
+          if (syncHash) {
+            history.replaceState(null, "", `#slide-${index + 1}`);
+          }
+        }
+
+        function next() {
+          show(index + 1);
+        }
+
+        function prev() {
+          show(index - 1);
+        }
+
+        function isDeckKey(event) {
+          return event instanceof KeyboardEvent;
+        }
+
+        document.querySelector("[data-next]")?.addEventListener("click", next);
+        document.querySelector("[data-prev]")?.addEventListener("click", prev);
+        window.addEventListener("hashchange", () => show(parseHash(), false));
+        window.addEventListener("keydown", (event) => {
+          if (!isDeckKey(event)) return;
+          if (["ArrowRight", "PageDown", " "].includes(event.key)) {
+            event.preventDefault();
+            next();
+          }
+          if (["ArrowLeft", "PageUp"].includes(event.key)) {
+            event.preventDefault();
+            prev();
+          }
+          if (event.key === "Home") {
+            event.preventDefault();
+            show(0);
+          }
+          if (event.key === "End") {
+            event.preventDefault();
+            show(total - 1);
+          }
+        });
+
+        show(parseHash(), !location.hash);
+      })();
+    </script>
+  </body>
+</html>
