@@ -387,3 +387,31 @@ def test_search_deduplicates_semantic_candidates_by_memory_id():
     )
 
     assert [record.memory_id for record in records] == ["chat-coffee"]
+
+
+def test_search_deduplicates_semantic_candidates_by_normalized_content():
+    first = _search_hit(
+        "capability-first",
+        "车辆的小憩模式能力由脱敏车型配置确认。",
+        confidence=0.9,
+        created_at="2026-07-17T09:11:56Z",
+        source_event_ids=["gen_capability_000001"],
+        vector_rank=1,
+    )
+    duplicate = _search_hit(
+        "capability-duplicate",
+        "  车辆的小憩模式能力由脱敏车型配置确认。  ",
+        confidence=0.8,
+        created_at="2026-07-16T09:11:56Z",
+        source_event_ids=["gen_capability_000002"],
+        vector_rank=2,
+    )
+    raw = RankedSearchPowerMem([first, duplicate])
+
+    records = _chat_search(
+        MemoryService(PowerMemClient(raw)),
+        query="还有其他的吗",
+        limit=5,
+    )
+
+    assert [record.memory_id for record in records] == ["capability-first"]
