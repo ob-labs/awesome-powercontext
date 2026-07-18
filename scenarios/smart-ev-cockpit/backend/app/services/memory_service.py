@@ -1,3 +1,4 @@
+import unicodedata
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -60,7 +61,7 @@ class MemoryService:
             filters,
         )
         if not needs_server_filter_fallback(filters):
-            return sort_memories(records)[:limit]
+            return _deduplicate_records(sort_memories(records))[:limit]
 
         server_filters = powermem_server_filters(filters)
         read_limit = fallback_read_limit(limit)
@@ -80,7 +81,7 @@ class MemoryService:
             )
 
         if not self._client_supports_listing():
-            return sort_memories(records)[:limit]
+            return _deduplicate_records(sort_memories(records))[:limit]
 
         rows = self.client.list_memories(
             filters=server_filters,
@@ -94,7 +95,7 @@ class MemoryService:
                 filters,
             ),
         )
-        return sort_memories(records)[:limit]
+        return _deduplicate_records(sort_memories(records))[:limit]
 
     def _search_recent_chat(
         self,
@@ -138,7 +139,7 @@ class MemoryService:
             (powermem_hit_to_record(row) for row in rows),
             filters,
         )
-        return sort_memories(records)[:limit]
+        return _deduplicate_records(sort_memories(records))[:limit]
 
     def add(
         self,
@@ -267,12 +268,13 @@ def _unique_candidates(
     candidates: list[_SearchCandidate],
 ) -> list[_SearchCandidate]:
     unique: list[_SearchCandidate] = []
-    seen: set[str] = set()
+    seen: set[tuple[str, ...]] = set()
     for candidate in candidates:
-        if candidate.record.memory_id in seen:
+        identity = _record_identity(candidate.record)
+        if identity in seen:
             continue
         unique.append(candidate)
-        seen.add(candidate.record.memory_id)
+        seen.add(identity)
     return unique
 
 
@@ -294,10 +296,44 @@ def _merge_unique(
     second: list[MemoryRecord],
 ) -> list[MemoryRecord]:
     records: list[MemoryRecord] = []
-    seen: set[str] = set()
+    seen: set[tuple[str, ...]] = set()
     for record in [*first, *second]:
-        if record.memory_id in seen:
+        identity = _record_identity(record)
+        if identity in seen:
             continue
         records.append(record)
-        seen.add(record.memory_id)
+        seen.add(identity)
     return records
+
+
+def _deduplicate_records(records: list[MemoryRecord]) -> list[MemoryRecord]:
+    unique: list[MemoryRecord] = []
+    seen: set[tuple[str, ...]] = set()
+    for record in records:
+        identity = _record_identity(record)
+        if identity in seen:
+            continue
+        unique.append(record)
+        seen.add(identity)
+    return unique
+
+
+def _record_identity(record: MemoryRecord) -> tuple[str, ...]:
+    normalized_content = _normalize_content(record.content)
+    if not normalized_content:
+        return ("memory_id", record.memory_id)
+    metadata = record.metadata
+    return (
+        "content",
+        metadata.scenario_id,
+        metadata.vehicle_id,
+        metadata.actor_id or "",
+        metadata.seat_position or "",
+        metadata.memory_kind,
+        normalized_content,
+    )
+
+
+def _normalize_content(content: str) -> str:
+    normalized = unicodedata.normalize("NFKC", content).casefold()
+    return " ".join(normalized.split())

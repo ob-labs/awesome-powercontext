@@ -1,4 +1,5 @@
 import logging
+import unicodedata
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
@@ -11,6 +12,7 @@ from uuid import uuid4
 
 from app.domain.memory_models import MemoryLocale
 from app.services.test_data_generator import (
+    GeneratedMemoryRow,
     generate_dataset_id,
     generate_memory_rows,
     read_memory_jsonl,
@@ -23,7 +25,10 @@ DEFAULT_IMPORT_MAX_WORKERS = 3
 RATE_LIMIT_MAX_RETRIES = 6
 RATE_LIMIT_INITIAL_BACKOFF_SECONDS = 1.0
 RATE_LIMIT_MAX_BACKOFF_SECONDS = 30.0
-JobState = Literal["idle", "generated", "importing", "imported", "deleting", "deleted", "failed"]
+LOGICALLY_UNIQUE_MEMORY_KINDS = frozenset({"vehicle_capability"})
+JobState = Literal[
+    "idle", "generated", "importing", "imported", "deleting", "deleted", "failed"
+]
 
 logger = logging.getLogger(__name__)
 
@@ -387,6 +392,13 @@ class TestDataService:
             self._update_status(skipped_count=len(rows), state="imported")
             return
 
+        rows, duplicate_count = self._deduplicate_import_rows(memory, rows)
+        if duplicate_count:
+            self._increment_status("skipped_count", duplicate_count)
+        if not rows:
+            self._update_status(state="imported")
+            return
+
         worker_count = max(1, min(max_workers, len(rows) or 1))
         with ThreadPoolExecutor(max_workers=worker_count) as executor:
             for batch_start in range(0, len(rows), worker_count):
@@ -419,6 +431,62 @@ class TestDataService:
         self._update_status(
             state="imported" if final_status.failed_count == 0 else "failed"
         )
+
+    def _deduplicate_import_rows(
+        self,
+        memory,
+        rows: list[GeneratedMemoryRow],
+    ) -> tuple[list[GeneratedMemoryRow], int]:
+        existing_keys = self._existing_logical_memory_keys(memory, rows)
+        seen = set(existing_keys)
+        unique_rows: list[GeneratedMemoryRow] = []
+        duplicate_count = 0
+
+        for row in rows:
+            key = _logical_memory_key(row.content, row.metadata)
+            if key is not None and key in seen:
+                duplicate_count += 1
+                continue
+            unique_rows.append(row)
+            if key is not None:
+                seen.add(key)
+
+        return unique_rows, duplicate_count
+
+    def _existing_logical_memory_keys(
+        self,
+        memory,
+        rows: list[GeneratedMemoryRow],
+    ) -> set[tuple[str, ...]]:
+        candidate_keys = {
+            key
+            for row in rows
+            if (key := _logical_memory_key(row.content, row.metadata)) is not None
+        }
+        if not candidate_keys:
+            return set()
+
+        first_metadata = rows[0].metadata
+        filters = {
+            "scenario_id": first_metadata.get("scenario_id", "smart_ev_cockpit"),
+            "vehicle_id": first_metadata.get("vehicle_id", "demo_vehicle_001"),
+        }
+        try:
+            result = memory.get_all(user_id=None, filters=filters, limit=10000)
+        except Exception as exc:  # pragma: no cover - live backend safeguard
+            logger.warning("Could not preflight logical memory duplicates: %s", exc)
+            return set()
+
+        existing_keys: set[tuple[str, ...]] = set()
+        for row in self._memory_rows(result):
+            metadata = row.get("metadata") if isinstance(row, dict) else None
+            if not isinstance(metadata, dict):
+                continue
+            content = row.get("memory", row.get("content", ""))
+            key = _logical_memory_key(str(content), metadata)
+            if key is not None:
+                existing_keys.add(key)
+        return existing_keys
 
     def _add_row_with_rate_limit_retry(
         self,
@@ -486,3 +554,27 @@ class TestDataService:
         if not isinstance(actor_id, str):
             return row.user_id
         return actor_user_ids.get(actor_id, row.user_id)
+
+
+def _logical_memory_key(content: str, metadata: dict[str, Any]) -> tuple[str, ...] | None:
+    memory_kind = str(metadata.get("memory_kind", ""))
+    if memory_kind not in LOGICALLY_UNIQUE_MEMORY_KINDS:
+        return None
+
+    capability_feature = _normalize_text(str(metadata.get("capability_feature", "")))
+    identity = capability_feature or _normalize_text(content)
+    if not identity:
+        return None
+    return (
+        str(metadata.get("scenario_id", "")),
+        str(metadata.get("vehicle_id", "")),
+        str(metadata.get("actor_id", "")),
+        str(metadata.get("seat_position", "")),
+        memory_kind,
+        identity,
+    )
+
+
+def _normalize_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value).casefold()
+    return " ".join(normalized.split())

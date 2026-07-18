@@ -67,12 +67,26 @@ def generate_memory_rows(
         generated_at=generation_time if generated_at is not None else None,
     )
     templates = _memory_templates(locale)
+    repeatable_templates = [
+        template for template in templates if not template.get("singleton", False)
+    ]
     choices = _localized_choices(locale)
     rows: list[GeneratedMemoryRow] = []
+    template_occurrences: dict[str, int] = {}
 
     for index in range(count):
-        template = templates[index % len(templates)]
-        actor_id = _actor_for_template(template, index)
+        template = (
+            templates[index]
+            if index < len(templates)
+            else repeatable_templates[(index - len(templates)) % len(repeatable_templates)]
+        )
+        event_prefix = str(template["event_prefix"])
+        occurrence = template_occurrences.get(event_prefix, 0)
+        actor_id = _actor_for_template(
+            template,
+            occurrence if template.get("actors") else index,
+        )
+        template_occurrences[event_prefix] = occurrence + 1
         seat_position = ACTORS[actor_id]
         occurred_at = generation_time + timedelta(
             days=index % 45,
@@ -122,6 +136,10 @@ def generate_memory_rows(
             metadata["region"] = template_values["city_area"]
         if template["memory_kind"] == "driving_preference":
             metadata["drive_mode"] = "comfort"
+        if template["memory_kind"] == "vehicle_capability":
+            metadata["capability_feature"] = "rest_mode"
+            metadata["capability_supported"] = True
+            metadata["capability_source_field"] = "masked_vehicle_profile"
         if template.get("seasonal_cabin_control"):
             metadata["season"] = season
             metadata["target_temp_c"] = template_values["temp"]
@@ -347,6 +365,7 @@ def _memory_templates(locale: MemoryLocale) -> list[dict[str, Any]]:
                 "privacy_level": "public_demo",
                 "visibility": "public_demo",
                 "event_prefix": "capability",
+                "singleton": True,
                 "content": "车辆的小憩模式能力由脱敏车型配置确认。",
                 "actors": ["driver_primary"],
             },
@@ -479,6 +498,7 @@ def _memory_templates(locale: MemoryLocale) -> list[dict[str, Any]]:
             "privacy_level": "public_demo",
             "visibility": "public_demo",
             "event_prefix": "capability",
+            "singleton": True,
             "content": "Rest mode capability is verified against the masked vehicle profile.",
             "actors": ["driver_primary"],
         },

@@ -101,6 +101,17 @@ def test_generate_memory_rows_creates_realistic_large_dataset():
         row.metadata["recommendation_hint"] == "calm dinner"
         for row in relationship_rows
     )
+    capability_rows = [
+        row for row in rows
+        if row.metadata["memory_kind"] == "vehicle_capability"
+    ]
+    assert len(capability_rows) == 1
+    assert capability_rows[0].metadata["capability_feature"] == "rest_mode"
+    assert capability_rows[0].metadata["capability_supported"] is True
+    assert (
+        capability_rows[0].metadata["capability_source_field"]
+        == "masked_vehicle_profile"
+    )
 
     for row in rows:
         MemoryMetadata.model_validate(row.metadata)

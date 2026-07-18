@@ -4247,7 +4247,7 @@ button:focus-visible {
   bottom: 9%;
   display: grid;
   gap: 6px;
-  width: min(220px, 18vw);
+  width: min(190px, 11vw);
 }
 
 .interior-trim-selector label {

@@ -1,7 +1,9 @@
 import re
+from dataclasses import replace
 from pathlib import Path
 from threading import Event
 
+from app.services.test_data_generator import read_memory_jsonl, write_memory_jsonl
 from app.services.test_data_service import TestDataService
 
 
@@ -179,6 +181,83 @@ def test_import_dataset_apply_writes_rows_with_infer_disabled(tmp_path: Path):
     assert all(call["infer"] is False for call in memory.add_calls)
     assert all(
         call["metadata"]["dataset_id"] == generated.dataset_id
+        for call in memory.add_calls
+    )
+
+
+def test_import_dataset_collapses_legacy_static_capability_duplicates(tmp_path: Path):
+    service = TestDataService(data_root=tmp_path)
+    generated = service.generate_dataset(count=4, seed=2, locale="zh")
+    dataset_path = Path(generated.dataset_path)
+    rows = read_memory_jsonl(dataset_path)
+    capability = next(
+        row for row in rows
+        if row.metadata["memory_kind"] == "vehicle_capability"
+    )
+    duplicate = replace(
+        capability,
+        metadata={
+            **capability.metadata,
+            "source_event_ids": ["gen_capability_legacy_duplicate"],
+        },
+    )
+    write_memory_jsonl(dataset_path, [capability, duplicate])
+    memory = RecordingMemory(existing_rows=[])
+
+    status = service.import_dataset(
+        memory=memory,
+        dataset_id=generated.dataset_id,
+        apply=True,
+    )
+
+    assert status.generated_count == 2
+    assert status.imported_count == 1
+    assert status.skipped_count == 1
+    assert len(memory.add_calls) == 1
+
+
+def test_import_dataset_skips_existing_logical_vehicle_capability(tmp_path: Path):
+    service = TestDataService(data_root=tmp_path)
+    generated = service.generate_dataset(count=4, seed=2)
+    rows = read_memory_jsonl(Path(generated.dataset_path))
+    capability = next(
+        row for row in rows
+        if row.metadata["memory_kind"] == "vehicle_capability"
+    )
+
+    class ExistingCapabilityMemory(RecordingMemory):
+        def get_all(self, user_id=None, filters=None, limit=100, offset=0):
+            self.get_all_calls.append(
+                {"user_id": user_id, "filters": filters, "limit": limit}
+            )
+            if filters and "dataset_id" in filters:
+                return {"results": []}
+            return {"results": self.existing_rows[offset:offset + limit]}
+
+    memory = ExistingCapabilityMemory(
+        existing_rows=[
+            {
+                "id": "seed_capability",
+                "memory": "Existing rest mode capability seed.",
+                "metadata": {
+                    **capability.metadata,
+                    "dataset_id": "earlier_dataset",
+                },
+            }
+        ]
+    )
+
+    status = service.import_dataset(
+        memory=memory,
+        dataset_id=generated.dataset_id,
+        apply=True,
+    )
+
+    assert status.generated_count == 4
+    assert status.imported_count == 3
+    assert status.skipped_count == 1
+    assert all(
+        call["metadata"]["memory_kind"] != "vehicle_capability"
         for call in memory.add_calls
     )
 
