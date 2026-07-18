@@ -85,6 +85,8 @@ class OrchestrationPowerMem:
 
     def add(self, content, **kwargs):
         self.add_calls.append({"content": content, **kwargs})
+        if kwargs.get("infer"):
+            return {"results": []}
         return {"results": [{"id": "added-preference", "memory": content}]}
 
     def search(self, **kwargs):

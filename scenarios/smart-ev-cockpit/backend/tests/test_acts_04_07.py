@@ -1272,6 +1272,7 @@ def test_seeds_cover_all_queried_kinds_with_inference_disabled():
         "media_preference",
         "safety_policy",
         "relationship_event",
+        "temporary_context",
     }
     driving_calls = [
         call
@@ -1328,6 +1329,7 @@ def test_seeding_upgrades_old_cabin_database_and_is_idempotent_by_source_id():
         "seed_media_child_sleep",
         "seed_safety_child_volume",
         "seed_relationship_anniversary",
+        "seed_temporary_day90_cleanup_v2",
     }
     expected_stored_source_ids = {
         "dlg_0001",

@@ -234,6 +234,61 @@ def test_empty_content_is_not_planned_for_update_and_is_audited_as_skipped():
     assert fake.update_calls == []
 
 
+def test_run_reports_no_candidate_audit_when_lifecycle_has_nothing_to_mutate():
+    fake = CrudPowerMem()
+    service = LifecycleService(PowerMemClient(fake))
+
+    result = service.run(
+        [
+            memory_record(
+                "durable",
+                metadata_updates={
+                    "memory_kind": "driving_preference",
+                    "memory_layer": "long_term",
+                },
+            )
+        ],
+        current_day=90,
+    )
+
+    assert result.plan == []
+    assert result.completed_operations == []
+    assert result.audit == [
+        {
+            "type": "REVIEW",
+            "memory_id": "lifecycle-review",
+            "memory_ids": [],
+            "before_status": "active",
+            "after_status": "unchanged",
+            "result": "no_candidates",
+            "reason": "no_temporary_context_due",
+        }
+    ]
+
+
+def test_run_reports_no_candidate_audit_when_temporary_memories_are_not_due():
+    fake = CrudPowerMem()
+    service = LifecycleService(PowerMemClient(fake))
+
+    result = service.run(
+        [
+            memory_record(
+                "future-temp",
+                metadata_updates={
+                    "retention_policy": "expire_after_valid_until",
+                    "valid_until": "2026-04-15T00:00:00Z",
+                },
+            )
+        ],
+        current_day=90,
+    )
+
+    assert result.plan == []
+    assert result.completed_operations == []
+    assert result.audit[0]["type"] == "REVIEW"
+    assert result.audit[0]["result"] == "no_candidates"
+
+
 class FailingCrudPowerMem(CrudPowerMem):
     def update(self, *, memory_id: str, content: str, metadata: dict) -> dict:
         if memory_id == "b":

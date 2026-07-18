@@ -11,7 +11,7 @@
 | 前端 (Vite + React) | `:5173` | 演示界面，`/api` 请求由 Vite 代理转发到后端 |
 | 后端 (FastAPI) | `127.0.0.1:8000` | 场景编排 + PowerMem SDK（local_sdk 模式） |
 | PowerMem | 随后端加载（pip 包 `powermem`） | 记忆的增删改查、生命周期、审计 |
-| 记忆存储 | SQLite（默认，本地文件）或 OceanBase | 按 `.env` 中 `POWERMEM_STORAGE_PROVIDER` 决定 |
+| 记忆存储 | 远程 OceanBase（默认） | 由 `.env` 中的 `DATABASE_PROVIDER` 和 `OCEANBASE_*` 参数配置；SQLite 需显式启用 |
 | LLM / Embedding | `.env` 中配置的 OpenAI 兼容服务 | 记忆抽取与向量化 |
 
 演示访问地址：本机打开 `http://localhost:5173/`。如需让同网段的其他电脑观看，启动前端时绑定 `--host 0.0.0.0`，观众访问 `http://<演示机IP>:5173/`（记得放行防火墙的 5173 端口）。
@@ -20,9 +20,14 @@
 
 ## 2. 演示前环境检查（约 2 分钟）
 
-在演示机上依次执行（`$OPENAI_LLM_BASE_URL`、`$LLM_API_KEY` 以 `.env` 中的实际值代入）：
+在演示机上依次执行。先从项目根目录加载 `.env`，再检查其中配置的 OceanBase、LLM 和 Embedding 服务：
 
 ```bash
+# 加载 .env，供后续检查命令读取连接参数
+set -a
+source .env
+set +a
+
 # ① 后端健康检查，期望返回 {"status":"ok",...}
 curl -s http://127.0.0.1:8000/api/health
 
@@ -33,8 +38,8 @@ ss -tlnp | grep 5173
 curl -s -o /dev/null -w "%{http_code}\n" "$OPENAI_LLM_BASE_URL/models" \
   -H "Authorization: Bearer $LLM_API_KEY"
 
-# ④（仅 OceanBase 模式）数据库端口可达性
-# timeout 5 bash -c '</dev/tcp/<OCEANBASE_HOST>/<OCEANBASE_PORT>' && echo 可达
+# ④ 默认远程 OceanBase 数据库端口可达性
+timeout 5 bash -c "</dev/tcp/${OCEANBASE_HOST}/${OCEANBASE_PORT}" && echo 可达
 ```
 
 任一项不通时的启动命令（在项目根目录下执行）：
@@ -129,7 +134,7 @@ curl -s -X POST http://127.0.0.1:8000/api/scenarios/smart-ev-cockpit/test-data/i
 | 场景 7 纪念日推荐 | 第 42 天 | 主驾 | 今晚有什么安排建议？ | 命中 `relationship_event`；推荐卡片出现，但完整纪念日日期被脱敏 |
 | 场景 8 驾驶模式建议 | 第 56 天 | 主驾 | 建议一下这段路的驾驶模式。 | 长期驾驶偏好 + 当前车辆状态共同决定建议；通勤路线保持区域级泛化 |
 | 场景 9 主动关怀 | 第 70 天 | 主驾 | （台词为触发语，前端自动改调 `POST /events/vehicle` 低电量事件） | SOC/续航从正常变为低电量；助手用个性化语气主动提醒充电（命中 `emotional_preference`） |
-| 场景 10 生命周期与隐私 | 第 90 天 | 主驾 | （前端自动改调 `POST /lifecycle/run`，current_day=90） | 生命周期面板：`temporary_context` 记忆衰减（decayed）/被清理，长期偏好保持 active；每个 UPDATE/DELETE 都有审计记录 |
+| 场景 10 生命周期与隐私 | 第 90 天 | 主驾 | （前端自动改调 `POST /lifecycle/run`，current_day=90） | 首次运行看到 `temporary_context` 被清理，例如 `DELETE: deleted (ok)`；重复运行看到 `REVIEW: unchanged (no_candidates)`，表示没有新的到期短期记忆；每条记录都有审计 trace |
 
 场景 2 的补充操作：发送主驾的"有点冷"之后，**不要点"下一个"**，先在座位选择器点"前排乘客"，在输入框输入"有点冷"发送；再切"后排儿童"重复一次。对比三次的车控差异后，再点"下一个"进入场景 3。
 

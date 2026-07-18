@@ -110,6 +110,13 @@ class MemoryRecord(BaseModel):
     metadata: MemoryMetadata
 
 
+class InferredMemoryMutation(BaseModel):
+    event: Literal["ADD", "UPDATE", "DELETE"]
+    memory_id: str
+    content: str
+    previous_content: str | None = None
+
+
 class MemoryOperation(BaseModel):
     type: Literal["SEARCH", "ADD", "UPDATE", "DELETE", "VEHICLE_PATCH", "CHAT"]
     memory_ids: list[str] = Field(default_factory=list)

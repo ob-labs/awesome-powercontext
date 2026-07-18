@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 import httpx
@@ -5,6 +6,42 @@ import httpx
 
 class LlmConnectionError(RuntimeError):
     pass
+
+
+_PERSISTENCE_CLAIM_PATTERNS = {
+    "ADD": (
+        re.compile(r"(?:已|已经)(?:记住|记下|保存|记录)"),
+        re.compile(r"(?:记住|记下|保存|记录)了"),
+        re.compile(r"(?:我会|会为您)(?:记住|记下|保存|记录)"),
+        re.compile(r"(?:已|已经)将.{0,80}(?:保存|记录|写入)"),
+        re.compile(
+            r"\b(?:i(?:'ve| have)|we(?:'ve| have))\s+"
+            r"(?:saved|remembered|recorded)\b",
+            re.IGNORECASE,
+        ),
+        re.compile(r"\bi(?:'ll| will)\s+remember\b", re.IGNORECASE),
+    ),
+    "UPDATE": (
+        re.compile(r"(?:已|已经)(?:更新|修改)"),
+        re.compile(r"(?:更新|修改)了"),
+        re.compile(r"(?:我会|会为您)(?:更新|修改)"),
+        re.compile(r"(?:已|已经)将.{0,80}(?:更新|修改)"),
+        re.compile(
+            r"\b(?:i(?:'ve| have)|we(?:'ve| have))\s+(?:updated|modified)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    "DELETE": (
+        re.compile(r"(?:已|已经)(?:删除|移除)"),
+        re.compile(r"(?:删除|移除)了"),
+        re.compile(r"(?:我会|会为您)(?:删除|移除)"),
+        re.compile(r"(?:已|已经)将.{0,80}(?:删除|移除)"),
+        re.compile(
+            r"\b(?:i(?:'ve| have)|we(?:'ve| have))\s+(?:deleted|removed)\b",
+            re.IGNORECASE,
+        ),
+    ),
+}
 
 
 class OpenAICompatibleLlmClient:
@@ -31,7 +68,9 @@ class OpenAICompatibleLlmClient:
         seat_position: str,
         vehicle_state: dict,
         memory_hits: list[dict[str, Any]],
+        memory_mutations: list[dict[str, Any]] | None = None,
     ) -> str:
+        memory_mutations = memory_mutations or []
         messages = [
             {
                 "role": "system",
@@ -41,7 +80,13 @@ class OpenAICompatibleLlmClient:
                     "state and PowerMem memory hits when relevant. Do not claim access to "
                     "live internet, live weather, or external tools. If the user asks for "
                     "real-time weather, say that live weather is unavailable and mention "
-                    "vehicle sensor readings if useful. Keep the answer concise."
+                    "vehicle sensor readings if useful. Only claim a memory was saved when "
+                    "an ADD mutation is present. Only claim a memory was updated when an "
+                    "UPDATE mutation is present. Only claim a memory was deleted when a "
+                    "DELETE mutation is present. A SEARCH hit or PowerMem connectivity is "
+                    "not proof that this turn was saved. Do not describe an ADD, UPDATE, "
+                    "or DELETE unless that exact mutation is present. Keep the answer "
+                    "concise."
                 ),
             },
             {
@@ -51,6 +96,7 @@ class OpenAICompatibleLlmClient:
                     f"seat_position: {seat_position}\n"
                     f"vehicle_state: {vehicle_state}\n"
                     f"powermem_memory_hits: {memory_hits}\n"
+                    f"powermem_memory_mutations: {memory_mutations}\n"
                     f"user_utterance: {user_text}"
                 ),
             },
@@ -83,4 +129,20 @@ class OpenAICompatibleLlmClient:
 
         if not isinstance(content, str) or not content.strip():
             raise LlmConnectionError("LLM chat response was empty")
-        return content.strip()
+        content = content.strip()
+        _validate_persistence_claim(content, memory_mutations)
+        return content
+
+
+def _validate_persistence_claim(
+    content: str,
+    memory_mutations: list[dict[str, Any]],
+) -> None:
+    events = {
+        str(mutation.get("event", "")).upper() for mutation in memory_mutations
+    }
+    for event, patterns in _PERSISTENCE_CLAIM_PATTERNS.items():
+        if event not in events and any(pattern.search(content) for pattern in patterns):
+            raise LlmConnectionError(
+                "LLM returned an unsupported memory persistence claim"
+            )

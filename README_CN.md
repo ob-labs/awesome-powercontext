@@ -27,8 +27,8 @@
 
 ```
 浏览器 (Vite + React)  ──/api 代理──►  FastAPI 后端  ──local SDK──►  PowerMem
-    只渲染后端                          构建检索请求、                存储：SQLite（默认）
-  返回的记忆与                          投影/脱敏记忆、                    或 OceanBase
+    只渲染后端                          构建检索请求、                存储：OceanBase（默认）
+  返回的记忆与                          投影/脱敏记忆、                    或 SQLite（显式启用）
    trace 证据                           记录审计日志
 ```
 
@@ -40,16 +40,17 @@
 
 - Python **3.11+**
 - Node.js **18+**
+- 一个可访问的远程 OceanBase 实例
 - 一个 OpenAI 兼容的 LLM + Embedding 服务（如 DashScope、OpenAI）及 API Key
 
 ### 1. 配置
 
 ```bash
 cp .env.example .env
-# 编辑 .env：填入 LLM_API_KEY / EMBEDDING_API_KEY 和你的服务 base URL
+# 编辑 .env：填写 OceanBase 连接信息、模型 API Key 和服务 base URL
 ```
 
-默认使用本地 SQLite 文件存储记忆，无需部署数据库。如需改用 [OceanBase](https://github.com/oceanbase/oceanbase) 作为向量存储，见[配置说明](#配置说明)。
+复制后的配置模板默认使用远程 [OceanBase](https://github.com/oceanbase/oceanbase) 作为 PowerMem 向量存储。启动后端前请填写 `OCEANBASE_*` 连接参数。如需改用本地 SQLite 文件，见[配置说明](#配置说明)。
 
 ### 2. 启动后端
 
@@ -81,25 +82,23 @@ npm run dev -- --host 127.0.0.1 --port 5173
 | 变量 | 说明 | 默认值 |
 |---|---|---|
 | `POWERMEM_BACKEND` | PowerMem 集成模式 | `local_sdk` |
-| `POWERMEM_STORAGE_PROVIDER` | `sqlite` 或 `oceanbase` | `sqlite` |
-| `POWERMEM_SQLITE_PATH` | SQLite 文件路径（sqlite 模式） | `./data/powermem_smart_ev.db` |
+| `DATABASE_PROVIDER` | PowerMem 向量存储后端 | `oceanbase` |
+| `OCEANBASE_HOST` / `OCEANBASE_PORT` | 远程 OceanBase 地址 | `REPLACE_ME` / `2881` |
+| `OCEANBASE_USER` / `OCEANBASE_PASSWORD` | 远程 OceanBase 凭证 | `root@test` / `REPLACE_ME` |
+| `OCEANBASE_DATABASE` / `OCEANBASE_COLLECTION` | 数据库和记忆集合 | `smart_ev_cockpit` / `memories` |
+| `OCEANBASE_EMBEDDING_MODEL_DIMS` | OceanBase 向量维度，必须与 `EMBEDDING_DIMS` 一致 | `1024` |
 | `LLM_PROVIDER` / `LLM_MODEL` | 用于记忆抽取的对话模型 | `openai` / `qwen-plus` |
 | `LLM_API_KEY`, `OPENAI_LLM_BASE_URL` | OpenAI 兼容服务的凭证与地址 | — |
 | `EMBEDDING_MODEL`, `EMBEDDING_DIMS` | Embedding 模型与维度 | `text-embedding-v4` / `1024` |
 | `DEMO_PRIVACY_MODE` | 隐私投影严格程度 | `strict` |
 
 <details>
-<summary>使用 OceanBase 作为向量存储</summary>
+<summary>改用 SQLite</summary>
 
 ```bash
-DATABASE_PROVIDER=oceanbase
-OCEANBASE_HOST=<host>
-OCEANBASE_PORT=<port>
-OCEANBASE_USER=<user>
-OCEANBASE_PASSWORD=<password>
-OCEANBASE_DATABASE=<database>
-OCEANBASE_COLLECTION=memories
-OCEANBASE_EMBEDDING_MODEL_DIMS=1024
+DATABASE_PROVIDER=sqlite
+SQLITE_PATH=./data/powermem_smart_ev.db
+SQLITE_COLLECTION=memories
 ```
 
 </details>

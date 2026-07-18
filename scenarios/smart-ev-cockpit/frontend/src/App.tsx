@@ -48,6 +48,7 @@ import {
   SCENARIO_STEPS_BY_LOCALE,
   type Locale,
 } from "./i18n";
+import { describeChatSource } from "./view-models/chatSource";
 import { buildPetCompanionState } from "./view-models/petCompanion";
 import type {
   ActorId,
@@ -154,7 +155,7 @@ export default function App() {
           openAria: "打开 PowerMem PPT",
           dialogAria: "PowerMem(汽车智能座舱记忆方案)",
           title: "PowerMem(汽车智能座舱记忆方案)",
-          subtitle: "20 页 HTML PPT：PowerMem 能力、智能座舱价值与 demo 项目总览。",
+          subtitle: "16 页 HTML PPT：PowerMem 能力、智能座舱价值与 demo 项目总览。",
           openInNew: "新窗口打开",
           close: "关闭",
         }
@@ -164,7 +165,7 @@ export default function App() {
           dialogAria: "PowerMem smart EV cockpit PPT",
           title: "PowerMem Smart EV Cockpit PPT",
           subtitle:
-            "A 20-slide HTML deck covering PowerMem, cockpit capabilities, and this demo.",
+            "A 16-slide HTML deck covering PowerMem, cockpit capabilities, and this demo.",
           openInNew: "Open in new tab",
           close: "Close",
         };
@@ -278,6 +279,7 @@ export default function App() {
       if (selectedActorRef.current !== submittedActorId) {
         return;
       }
+      const chatSource = describeChatSource(result.operations);
       setResponse(result);
       setChatMessages((current) =>
         appendChatMessages(current, {
@@ -286,7 +288,7 @@ export default function App() {
             : createChatMessageId("assistant", current.length),
           role: "assistant",
           text: result.assistant_reply,
-          meta: result.powermem_connected ? "PowerMem" : result.live_backend,
+          meta: chatSource,
         }),
       );
       await loadChatHistory(submittedActorId, submittedUserId, (messages) => {
@@ -295,7 +297,12 @@ export default function App() {
           messages.length > 0 &&
           messages.some((message) => message.traceId === result.trace_id)
         ) {
-          setChatMessages(messages);
+          const messagesWithSource = messages.map((message) =>
+            message.role === "assistant" && message.traceId === result.trace_id
+              ? { ...message, meta: chatSource }
+              : message,
+          );
+          setChatMessages(messagesWithSource);
         }
       });
       void refreshUserProfile(submittedActorId);

@@ -191,8 +191,9 @@ def test_seeding_service_reuses_existing_seasonal_cabin_memory():
         "seed_media_child_sleep",
         "seed_safety_child_volume",
         "seed_relationship_anniversary",
+        "seed_temporary_day90_cleanup_v2",
     }
-    assert len(memory.get_all_calls) == 7
+    assert len(memory.get_all_calls) == 8
     assert all(
         list(call["filters"]) == [
             "scenario_id",

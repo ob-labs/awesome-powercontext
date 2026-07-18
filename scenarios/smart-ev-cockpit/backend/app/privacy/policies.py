@@ -10,7 +10,11 @@ class RedactionRule:
 
 
 REDACTION_RULES = [
-    RedactionRule("phone", re.compile(r"\b1[3-9]\d{9}\b"), "[REDACTED_PHONE]"),
+    RedactionRule(
+        "phone",
+        re.compile(r"(?<!\d)1[3-9]\d{9}(?!\d)"),
+        "[REDACTED_PHONE]",
+    ),
     RedactionRule(
         "exact_address",
         re.compile(r"\b\d{1,5}\s+[A-Z][A-Za-z]+\s+(Rd|Road|St|Street|Ave|Avenue)\b"),

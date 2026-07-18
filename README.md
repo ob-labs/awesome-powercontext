@@ -27,8 +27,8 @@ The demo runs through **ten acts** (memory creation → per-occupant disambiguat
 
 ```
 Browser (Vite + React)  ──/api proxy──►  FastAPI backend  ──local SDK──►  PowerMem
-     renders only                        builds queries,                 storage: SQLite (default)
-  backend-returned                       projects/redacts                      or OceanBase
+     renders only                        builds queries,                 storage: OceanBase (default)
+  backend-returned                       projects/redacts                      or SQLite (opt-in)
   memories & traces                      memories, audits
 ```
 
@@ -40,16 +40,17 @@ The backend is the only layer that talks to PowerMem. The frontend receives alre
 
 - Python **3.11+**
 - Node.js **18+**
+- A reachable remote OceanBase instance
 - An OpenAI-compatible LLM + embedding endpoint (e.g. DashScope, OpenAI) and API key
 
 ### 1. Configure
 
 ```bash
 cp .env.example .env
-# edit .env: set LLM_API_KEY / EMBEDDING_API_KEY and the base URLs of your provider
+# edit .env: set the OceanBase connection, model API keys, and provider base URLs
 ```
 
-By default memories are stored in a local SQLite file — no database setup required. To use [OceanBase](https://github.com/oceanbase/oceanbase) as the vector store instead, see [Configuration](#configuration).
+The copied template uses a remote [OceanBase](https://github.com/oceanbase/oceanbase) instance as PowerMem's vector store. Set the `OCEANBASE_*` connection values before starting the backend. To use a local SQLite file instead, see [Configuration](#configuration).
 
 ### 2. Run the backend
 
@@ -81,25 +82,23 @@ All configuration lives in `.env` (see [.env.example](.env.example)):
 | Variable | Description | Default |
 |---|---|---|
 | `POWERMEM_BACKEND` | PowerMem integration mode | `local_sdk` |
-| `POWERMEM_STORAGE_PROVIDER` | `sqlite` or `oceanbase` | `sqlite` |
-| `POWERMEM_SQLITE_PATH` | SQLite file path (sqlite mode) | `./data/powermem_smart_ev.db` |
+| `DATABASE_PROVIDER` | PowerMem vector store provider | `oceanbase` |
+| `OCEANBASE_HOST` / `OCEANBASE_PORT` | Remote OceanBase address | `REPLACE_ME` / `2881` |
+| `OCEANBASE_USER` / `OCEANBASE_PASSWORD` | Remote OceanBase credentials | `root@test` / `REPLACE_ME` |
+| `OCEANBASE_DATABASE` / `OCEANBASE_COLLECTION` | Database and memory collection | `smart_ev_cockpit` / `memories` |
+| `OCEANBASE_EMBEDDING_MODEL_DIMS` | OceanBase vector dimensions; must match `EMBEDDING_DIMS` | `1024` |
 | `LLM_PROVIDER` / `LLM_MODEL` | Chat model for memory extraction | `openai` / `qwen-plus` |
 | `LLM_API_KEY`, `OPENAI_LLM_BASE_URL` | Credentials and endpoint of your OpenAI-compatible provider | — |
 | `EMBEDDING_MODEL`, `EMBEDDING_DIMS` | Embedding model and dimensions | `text-embedding-v4` / `1024` |
 | `DEMO_PRIVACY_MODE` | Privacy projection strictness | `strict` |
 
 <details>
-<summary>Using OceanBase as the vector store</summary>
+<summary>Using SQLite instead</summary>
 
 ```bash
-DATABASE_PROVIDER=oceanbase
-OCEANBASE_HOST=<host>
-OCEANBASE_PORT=<port>
-OCEANBASE_USER=<user>
-OCEANBASE_PASSWORD=<password>
-OCEANBASE_DATABASE=<database>
-OCEANBASE_COLLECTION=memories
-OCEANBASE_EMBEDDING_MODEL_DIMS=1024
+DATABASE_PROVIDER=sqlite
+SQLITE_PATH=./data/powermem_smart_ev.db
+SQLITE_COLLECTION=memories
 ```
 
 </details>

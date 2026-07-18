@@ -371,6 +371,22 @@ class FailedSearchPowerMem(SearchPowerMem):
         raise RuntimeError("search failed")
 
 
+class UnsupportedInFilterPowerMem(SearchPowerMem):
+    def get_all(
+        self,
+        *,
+        filters: dict | None = None,
+        user_id: str | None = None,
+        limit: int = 100,
+    ):
+        self.get_all_calls.append(
+            {"filters": filters, "user_id": user_id, "limit": limit}
+        )
+        if isinstance((filters or {}).get("memory_kind"), dict):
+            return {"results": []}
+        return super().get_all(filters=filters, user_id=user_id, limit=limit)
+
+
 def test_vehicle_event_search_failure_does_not_mutate_state():
     container = AppContainer(
         powermem_client=PowerMemClient(FailedSearchPowerMem())
@@ -420,6 +436,39 @@ def test_lifecycle_endpoint_validates_and_mutates_scenario_day():
         "/api/scenarios/smart-ev-cockpit/lifecycle/run",
         json={"current_day": 91},
     ).status_code == 422
+
+
+def test_lifecycle_endpoint_falls_back_when_powermem_get_all_ignores_in_filter():
+    fake = UnsupportedInFilterPowerMem(
+        [
+            _record(
+                "expired-temp",
+                "temporary_context",
+                retention_policy="expire_after_valid_until",
+                valid_until="2026-01-15T00:00:00Z",
+            )
+        ]
+    )
+    client = TestClient(
+        create_app(container=AppContainer(powermem_client=PowerMemClient(fake)))
+    )
+
+    response = client.post(
+        "/api/scenarios/smart-ev-cockpit/lifecycle/run",
+        json={"current_day": 90},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["operations"][0]["type"] == "DELETE"
+    assert body["operations"][0]["memory_ids"] == ["expired-temp"]
+    assert fake.get_all_calls[0]["filters"]["memory_kind"] == {
+        "in": ["driving_preference", "emotional_preference", "temporary_context"]
+    }
+    assert fake.get_all_calls[1]["filters"] == {
+        "scenario_id": "smart_ev_cockpit",
+        "vehicle_id": "demo_vehicle_001",
+    }
 
 
 def test_lifecycle_endpoint_localizes_chinese_act_10_text():
