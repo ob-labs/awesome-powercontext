@@ -148,7 +148,7 @@ class LifecycleService:
             plan=plan,
             completed_operations=completed,
             failed_operation=None,
-            audit=audit,
+            audit=audit or self._no_candidate_evidence(memories, current_day),
         )
 
     @staticmethod
@@ -210,6 +210,25 @@ class LifecycleService:
                 }
             )
         return skipped
+
+    @staticmethod
+    def _no_candidate_evidence(
+        memories: list[MemoryRecord],
+        current_day: int,
+    ) -> list[dict]:
+        if current_day < 90:
+            return []
+        return [
+            {
+                "type": "REVIEW",
+                "memory_id": "lifecycle-review",
+                "memory_ids": [],
+                "before_status": "active",
+                "after_status": "unchanged",
+                "result": "no_candidates",
+                "reason": "no_temporary_context_due",
+            }
+        ]
 
     @staticmethod
     def _operation_evidence(operation: LifecycleOperation) -> dict:

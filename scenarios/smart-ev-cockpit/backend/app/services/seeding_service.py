@@ -186,6 +186,25 @@ class SeedingService:
                     **common,
                 ),
             ),
+            (
+                (
+                    "driver_primary has a temporary pickup reminder that expires "
+                    "before scenario day 90."
+                ),
+                "driver_primary",
+                MemoryMetadata(
+                    actor_id="driver_primary",
+                    seat_position="front_left",
+                    memory_kind="temporary_context",
+                    memory_dimension=["working"],
+                    memory_layer="short_term",
+                    source_event_ids=["seed_temporary_day90_cleanup_v2"],
+                    valid_until="2026-01-15T00:00:00Z",
+                    retention_policy="expire_after_valid_until",
+                    retention_score=0.72,
+                    **common,
+                ),
+            ),
         ]
 
 

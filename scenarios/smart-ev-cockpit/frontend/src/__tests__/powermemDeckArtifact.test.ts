@@ -15,20 +15,19 @@ function extractCssRule(html: string, selector: string) {
 }
 
 describe("PowerMem smart EV cockpit HTML deck artifact", () => {
-  it("ships a self-contained 20-slide HTML PPT in the frontend folder", () => {
+  it("ships a self-contained 16-slide HTML PPT in the frontend folder", () => {
     expect(existsSync(deckPath)).toBe(true);
 
     const html = readFileSync(deckPath, "utf8");
     const slideCount = (html.match(/<section class="slide/g) ?? []).length;
 
-    expect(slideCount).toBe(20);
+    expect(slideCount).toBe(16);
     expect(html).toContain("PowerMem");
     expect(html).toContain("Smart EV Cockpit");
     expect(html).toContain("AI 应用为什么需要记忆");
-    expect(html).toContain("PowerMem 在智能座舱中的能力");
-    expect(html).toContain("smart-ev-cockpit demo 项目");
-    expect(html).toContain("powermem 产品介绍.pptx");
-    expect(html).toContain("data-total=\"20\"");
+    expect(html).toContain("智能座舱记忆的五个卖点");
+    expect(html).toContain("LOCOMO：可量化的记忆优势");
+    expect(html).toContain("data-total=\"16\"");
     expect(html).toContain("KeyboardEvent");
     expect(html).toContain("ArrowRight");
     expect(html).toContain("smart-ev-cockpit-bg.png");
@@ -40,25 +39,22 @@ describe("PowerMem smart EV cockpit HTML deck artifact", () => {
     expect(existsSync(deckPath)).toBe(true);
 
     const html = readFileSync(deckPath, "utf8");
-    const productStart = html.indexOf("完整介绍 PowerMem 能力");
-    const cockpitStart = html.indexOf("PowerMem 在智能座舱中的能力");
-    const demoStart = html.indexOf('<section class="slide dark" data-slide="18">');
+    const productStart = html.indexOf("PowerMem 核心特性");
+    const cockpitStart = html.indexOf("座舱记忆模型");
+    const valueStart = html.indexOf("智能座舱记忆的五个卖点");
 
     expect(productStart).toBeGreaterThan(-1);
     expect(cockpitStart).toBeGreaterThan(productStart);
-    expect(demoStart).toBeGreaterThan(cockpitStart);
-    expect(html.indexOf("smart-ev-cockpit demo 项目", demoStart)).toBeGreaterThan(
-      demoStart,
-    );
+    expect(valueStart).toBeGreaterThan(cockpitStart);
   });
 
-  it("uses one unified cockpit-dark visual system across the whole deck", () => {
+  it("uses one Hermes Cyber cockpit-dark visual system across the whole deck", () => {
     expect(existsSync(deckPath)).toBe(true);
 
     const html = readFileSync(deckPath, "utf8");
 
     expect(html).toContain(
-      '<body data-total="20" data-theme="unified-cockpit-dark">',
+      '<body data-total="16" data-theme="hermes-cyber">',
     );
     expect(html).toContain('--cockpit-bg: url("smart-ev-cockpit-bg.png");');
     expect(html).not.toContain("--paper:");
@@ -78,6 +74,10 @@ describe("PowerMem smart EV cockpit HTML deck artifact", () => {
       "语义向量 + 全文关键词 + 图关系",
       "Ebbinghaus",
       "多模态记忆",
+      "基于艾宾浩斯遗忘曲线的记忆遗忘管理",
+      "智能记忆提取",
+      "经验/skills 蒸馏",
+      "混合检索/多路召回",
       "SDK / MCP / HTTP / CLI",
       "Dashboard / Observability",
       "Multi-Agent",
@@ -90,7 +90,7 @@ describe("PowerMem smart EV cockpit HTML deck artifact", () => {
       expect(html).toContain(term);
     }
 
-    expect(html).toContain("font-size: clamp(24px, 3vw, 50px);");
+    expect(html).toContain("font-size: clamp(22px, 2.6vw, 42px);");
     expect(html).not.toContain("font-size: clamp(30px, 3.4vw, 54px);");
     expect(html).not.toContain("font-size: clamp(40px, 4.8vw, 82px);");
   });
@@ -109,8 +109,8 @@ describe("PowerMem smart EV cockpit HTML deck artifact", () => {
       expect(rule).toContain("text-wrap: nowrap;");
     }
 
-    expect(h1Rule).toContain("font-size: clamp(34px, 4.7vw, 78px);");
-    expect(h2Rule).toContain("font-size: clamp(24px, 3vw, 50px);");
+    expect(h1Rule).toContain("font-size: clamp(28px, 4.2vw, 64px);");
+    expect(h2Rule).toContain("font-size: clamp(22px, 2.6vw, 42px);");
     expect(html).toContain("font-size: clamp(18px, 4.8vw, 26px);");
     expect(html).toContain("font-size: clamp(20px, 5.6vw, 30px);");
     expect(html).not.toContain("font-size: clamp(30px, 10vw, 46px);");
@@ -134,12 +134,16 @@ describe("PowerMem smart EV cockpit HTML deck artifact", () => {
       "RRF / rerank",
       "final_score = relevance_score × decay_factor",
       "R(t) = e^(-t/S)",
+      "20 minutes = 58.2%",
+      "31 days = 21.1%",
       "ScopeController",
       "PermissionController",
       "CollaborationCoordinator",
       "PrivacyProtector",
       "SOA vehicle state diff",
-      "Evidence Trace",
+      "智能座舱记忆的五个卖点",
+      "端云协同记忆：快、稳、可同步",
+      "GIS 联动：位置感和路线感",
     ];
 
     for (const term of requiredTerms) {
@@ -152,14 +156,12 @@ describe("PowerMem smart EV cockpit HTML deck artifact", () => {
 
     const html = readFileSync(deckPath, "utf8");
     const architectureSlides = [
-      'data-slide="5"',
-      'data-slide="7"',
-      'data-slide="9"',
+      'data-slide="6"',
+      'data-slide="8"',
       'data-slide="10"',
       'data-slide="11"',
+      'data-slide="12"',
       'data-slide="15"',
-      'data-slide="18"',
-      'data-slide="19"',
     ];
 
     for (const slideMarker of architectureSlides) {
@@ -174,7 +176,7 @@ describe("PowerMem smart EV cockpit HTML deck artifact", () => {
       expect(slideHtml).toMatch(/diagram-|architecture-|flow-|swimlane|business-loop/);
     }
 
-    expect((html.match(/<section class="slide/g) ?? []).length).toBe(20);
+    expect((html.match(/<section class="slide/g) ?? []).length).toBe(16);
     expect(html).not.toMatch(/TODO|TBD|PLACEHOLDER/);
   });
 });

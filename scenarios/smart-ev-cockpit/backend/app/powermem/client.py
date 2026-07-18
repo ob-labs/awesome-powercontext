@@ -1,6 +1,6 @@
 from typing import Any
 
-from app.domain.memory_models import MemoryMetadata, MemoryRecord
+from app.domain.memory_models import InferredMemoryMutation, MemoryMetadata, MemoryRecord
 
 
 class PowerMemConnectionError(RuntimeError):
@@ -8,6 +8,10 @@ class PowerMemConnectionError(RuntimeError):
 
 
 class PowerMemResponseError(RuntimeError):
+    pass
+
+
+class PowerMemIngestionError(RuntimeError):
     pass
 
 
@@ -47,6 +51,27 @@ class PowerMemClient:
             result,
             metadata=metadata,
         )
+
+    def infer_memories(
+        self,
+        *,
+        messages: list[dict[str, str]],
+        user_id: str,
+        metadata: dict,
+    ) -> list[InferredMemoryMutation]:
+        memory = self._require_memory()
+        try:
+            result = memory.add(
+                messages,
+                user_id=user_id,
+                metadata=metadata,
+                infer=True,
+            )
+        except Exception as exc:
+            raise PowerMemIngestionError(
+                f"PowerMem intelligent ingestion failed: {exc}"
+            ) from exc
+        return _mutations_from_infer_result(result)
 
     def search_memories(
         self,
@@ -122,3 +147,38 @@ def _records_from_add_result(
             )
         )
     return records
+
+
+def _mutations_from_infer_result(result: dict) -> list[InferredMemoryMutation]:
+    if (
+        not isinstance(result, dict)
+        or "results" not in result
+        or not isinstance(result["results"], list)
+    ):
+        raise PowerMemResponseError(
+            "PowerMem returned an invalid intelligent ingestion response: "
+            "expected a results list"
+        )
+
+    mutations: list[InferredMemoryMutation] = []
+    for index, row in enumerate(result["results"]):
+        if (
+            not isinstance(row, dict)
+            or row.get("id") in (None, "")
+            or not isinstance(row.get("memory"), str)
+            or not row["memory"].strip()
+            or row.get("event") not in {"ADD", "UPDATE", "DELETE"}
+        ):
+            raise PowerMemResponseError(
+                "PowerMem returned an invalid intelligent ingestion response: "
+                f"results[{index}] requires id, memory, and ADD/UPDATE/DELETE event"
+            )
+        mutations.append(
+            InferredMemoryMutation(
+                event=row["event"],
+                memory_id=str(row["id"]),
+                content=row["memory"],
+                previous_content=row.get("previous_memory"),
+            )
+        )
+    return mutations

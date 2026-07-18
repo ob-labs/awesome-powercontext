@@ -1,3 +1,9 @@
+from app.powermem.filtering import (
+    fallback_read_limit,
+    needs_server_filter_fallback,
+    powermem_server_filters,
+    records_matching_filters,
+)
 from app.powermem.mappers import powermem_hit_to_record
 from app.services.acts.base import ActContext
 from app.services.acts.localization import locale_for_context, localized
@@ -6,22 +12,23 @@ from app.services.lifecycle_service import LifecycleExecutionError, LifecycleSer
 
 def handle(context: ActContext, current_day: int, trace_id: str) -> dict:
     locale = locale_for_context(context)
-    rows = context.container.powermem_client.list_memories(
-        filters={
-            "scenario_id": "smart_ev_cockpit",
-            "vehicle_id": "demo_vehicle_001",
-            "memory_kind": {
-                "in": [
-                    "driving_preference",
-                    "emotional_preference",
-                    "temporary_context",
-                ]
-            },
+    filters = {
+        "scenario_id": "smart_ev_cockpit",
+        "vehicle_id": "demo_vehicle_001",
+        "memory_kind": {
+            "in": [
+                "driving_preference",
+                "emotional_preference",
+                "temporary_context",
+            ]
         },
+    }
+    memories = _list_lifecycle_memories(
+        context,
+        filters=filters,
         user_id=context.request.user_id or context.request.actor_id,
         limit=100,
     )
-    memories = [powermem_hit_to_record(row) for row in rows]
     service = LifecycleService(context.container.powermem_client)
     context.container.trace_service.create_trace(trace_id, context.request.session_id)
     try:
@@ -86,3 +93,48 @@ def _plan_item(operation) -> dict:
         "before_status": operation.before_status,
         "after_status": operation.after_status,
     }
+
+
+def _list_lifecycle_memories(
+    context: ActContext,
+    *,
+    filters: dict,
+    user_id: str,
+    limit: int,
+):
+    rows = context.container.powermem_client.list_memories(
+        filters=filters,
+        user_id=user_id,
+        limit=limit,
+    )
+    memories = records_matching_filters(
+        (powermem_hit_to_record(row) for row in rows),
+        filters,
+    )
+    has_temporary_context = any(
+        memory.metadata.memory_kind == "temporary_context" for memory in memories
+    )
+    if not needs_server_filter_fallback(filters) or has_temporary_context:
+        return memories[:limit]
+
+    fallback_rows = context.container.powermem_client.list_memories(
+        filters=powermem_server_filters(filters),
+        user_id=user_id,
+        limit=fallback_read_limit(limit),
+    )
+    fallback_memories = records_matching_filters(
+        (powermem_hit_to_record(row) for row in fallback_rows),
+        filters,
+    )
+    return _merge_unique(memories, fallback_memories)[:limit]
+
+
+def _merge_unique(first, second):
+    records = []
+    seen = set()
+    for record in [*first, *second]:
+        if record.memory_id in seen:
+            continue
+        records.append(record)
+        seen.add(record.memory_id)
+    return records

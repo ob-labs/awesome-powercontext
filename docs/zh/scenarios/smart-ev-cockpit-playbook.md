@@ -74,7 +74,7 @@ Developer note: 查看被选中的 `emotional_preference` memory ID。
 
 ## Act 10: 生命周期与隐私
 Presenter action: 跳转到 Day 90。
-PowerMem evidence: `temporary_context` 变为 `decayed`，长期偏好保持 active。
+PowerMem evidence: 首次运行时，过期 `temporary_context` 返回 `DELETE: deleted (ok)`；重复运行时返回 `REVIEW: unchanged (no_candidates)`。
 Vehicle evidence: 本幕不需要直接车辆命令。
 Privacy evidence: archive 和 delete 行为仍可追溯。
 Talk track: 生命周期管理让记忆持续有用，而不是堆积过期事实。

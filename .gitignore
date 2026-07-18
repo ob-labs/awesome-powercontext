@@ -57,3 +57,6 @@ test-results/
 
 # Local agent state
 .superpowers/
+
+
+./docs/superpowers

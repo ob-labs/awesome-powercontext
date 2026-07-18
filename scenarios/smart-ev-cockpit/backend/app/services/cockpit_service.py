@@ -5,7 +5,11 @@ from fastapi import HTTPException
 
 from app.domain.memory_models import MemoryOperation, MemoryRecord
 from app.domain.scenario_models import ActRequest, ActResult, ScenarioClock
-from app.powermem.client import PowerMemConnectionError
+from app.powermem.client import (
+    PowerMemConnectionError,
+    PowerMemIngestionError,
+    PowerMemResponseError,
+)
 from app.powermem.queries import build_general_cockpit_query
 from app.privacy.projection import project_memory_for_frontend
 from app.privacy.scrubber import scrub_text
@@ -24,6 +28,7 @@ from app.services.acts import (
 )
 from app.services.acts.act_09_proactive import VehicleEvent
 from app.services.acts.base import ActContext
+from app.services.chat_memory_service import ChatMemoryIngestionResult, ChatMemoryService
 from app.services.evidence_service import build_live_evidence
 from app.services.lifecycle_service import LifecycleExecutionError
 from app.services.llm_service import LlmConnectionError
@@ -92,7 +97,15 @@ class CockpitService:
                 update={"act_key": "Chat", "text": scrubbed.text}
             )
             try:
-                result = self._handle_chat(routed_request)
+                result = self._handle_chat(routed_request, trace_id)
+            except (
+                PowerMemConnectionError,
+                PowerMemIngestionError,
+                PowerMemResponseError,
+            ) as powermem_exc:
+                raise HTTPException(
+                    status_code=503, detail=str(powermem_exc)
+                ) from powermem_exc
             except LlmConnectionError as llm_exc:
                 raise HTTPException(status_code=503, detail=str(llm_exc)) from llm_exc
             return self._finalize(
@@ -116,7 +129,11 @@ class CockpitService:
         context = ActContext(request=routed_request, container=self.container)
         try:
             result, lifecycle = self._run_handler(act_key, context, trace_id)
-        except PowerMemConnectionError as exc:
+        except (
+            PowerMemConnectionError,
+            PowerMemIngestionError,
+            PowerMemResponseError,
+        ) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except LifecycleExecutionError as exc:
             raise LifecycleMutationError(
@@ -315,17 +332,25 @@ class CockpitService:
         if act_key in _HANDLERS:
             return _HANDLERS[act_key](context), None
         if act_key == "Chat":
-            return self._handle_chat(context.request), None
+            return self._handle_chat(context.request, trace_id), None
         self.container.powermem_client.require_memory()
         self.container.scenario_clock.current_day = 90
         return self._execute_lifecycle(context, 90, trace_id)
 
-    def _handle_chat(self, request: ActRequest) -> ActResult:
+    def _handle_chat(self, request: ActRequest, trace_id: str) -> ActResult:
+        ingestion = ChatMemoryService(self.container.powermem_client).ingest(
+            request=request,
+            trace_id=trace_id,
+        )
         if self.container.llm_client is None:
-            return self._handle_memory_chat_fallback(request)
-        return self._handle_llm_chat(request)
+            return self._handle_memory_chat_fallback(request, ingestion)
+        return self._handle_llm_chat(request, ingestion)
 
-    def _handle_llm_chat(self, request: ActRequest) -> ActResult:
+    def _handle_llm_chat(
+        self,
+        request: ActRequest,
+        ingestion: ChatMemoryIngestionResult,
+    ) -> ActResult:
         llm_client = self.container.llm_client
         if llm_client is None:
             raise LlmConnectionError("LLM chat is not configured for this demo.")
@@ -334,15 +359,29 @@ class CockpitService:
         operations: list[MemoryOperation] = [
             MemoryOperation(type="CHAT", result="llm_chat")
         ]
+        operations.extend(ingestion.operations)
         memory_hits = self._search_general_chat_memories(request, operations)
 
-        assistant_reply = llm_client.chat(
-            user_text=request.text,
-            actor_id=request.actor_id,
-            seat_position=request.seat_position,
-            vehicle_state=self.container.vehicle_state_service.current_state(),
-            memory_hits=[memory.model_dump(mode="json") for memory in memory_hits],
-        )
+        try:
+            assistant_reply = llm_client.chat(
+                user_text=request.text,
+                actor_id=request.actor_id,
+                seat_position=request.seat_position,
+                vehicle_state=self.container.vehicle_state_service.current_state(),
+                memory_hits=[memory.model_dump(mode="json") for memory in memory_hits],
+                memory_mutations=ingestion.llm_context(),
+            )
+        except LlmConnectionError as exc:
+            if ingestion.mutations:
+                summary = ", ".join(
+                    f"{mutation.event}:{mutation.memory_id}"
+                    for mutation in ingestion.mutations
+                )
+                raise LlmConnectionError(
+                    "PowerMem mutation succeeded "
+                    f"({summary}), but LLM chat generation failed: {exc}"
+                ) from exc
+            raise
         return ActResult(
             act_key="Chat",
             assistant_reply=assistant_reply,
@@ -350,13 +389,18 @@ class CockpitService:
             selected_memory_ids=[memory.memory_id for memory in memory_hits],
             reason_codes=["llm_chat"],
             operations=operations,
-            data_source="llm_chat",
+            data_source="powermem_sdk+llm",
         )
 
-    def _handle_memory_chat_fallback(self, request: ActRequest) -> ActResult:
+    def _handle_memory_chat_fallback(
+        self,
+        request: ActRequest,
+        ingestion: ChatMemoryIngestionResult,
+    ) -> ActResult:
         operations: list[MemoryOperation] = [
             MemoryOperation(type="CHAT", result="memory_chat_fallback")
         ]
+        operations.extend(ingestion.operations)
         memory_hits = self._search_general_chat_memories(request, operations)
         assistant_reply = _build_memory_chat_fallback_reply(request.text, memory_hits)
         return ActResult(
@@ -388,6 +432,7 @@ class CockpitService:
             filters=query.filters,
             limit=query.limit,
             user_id=query.user_id,
+            prefer_recent_chat=True,
         )
         operations.append(
             MemoryOperation(

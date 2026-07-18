@@ -589,6 +589,41 @@ describe("App live API integration", () => {
     expect(within(floatingChat).queryByText("提交一句语音指令，启动实时 PowerMem 追踪。")).not.toBeInTheDocument();
   });
 
+  it("labels free-form preference chat from the real PowerMem ADD operation", async () => {
+    vi.mocked(executeScenarioStep).mockResolvedValue({
+      ...liveResponse,
+      act_key: "Chat",
+      assistant_reply: "已记住你喜欢咖啡。",
+      trace_id: "trace_chat_add",
+      operations: [
+        { type: "CHAT" },
+        { type: "ADD", memory_ids: ["mem_coffee"] },
+        { type: "SEARCH" },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<App />);
+
+    const floatingChat = within(
+      screen.getByLabelText("智能电动车座舱场景"),
+    ).getByRole("region", { name: "悬浮语音聊天" });
+    const utterance = within(floatingChat).getByRole("textbox", {
+      name: "语音指令",
+    });
+    await user.clear(utterance);
+    await user.type(utterance, "I like coffee");
+    await user.click(within(floatingChat).getByRole("button", { name: /^发送$/ }));
+
+    expect(executeScenarioStep).toHaveBeenCalledWith({
+      actor_id: "driver_primary",
+      user_id: "driver_primary",
+      seat_position: "front_left",
+      text: "I like coffee",
+      session_id: "demo_session_001",
+    });
+    expect(await screen.findByText("PowerMem ADD + LLM")).toBeInTheDocument();
+  });
+
   it("keeps the cockpit visible when a random chat response omits evidence arrays", async () => {
     vi.mocked(executeScenarioStep).mockResolvedValue({
       act_key: "Chat",
