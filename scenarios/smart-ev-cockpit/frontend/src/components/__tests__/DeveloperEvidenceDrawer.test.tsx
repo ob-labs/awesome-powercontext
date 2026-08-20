@@ -9,12 +9,12 @@ describe("DeveloperEvidenceDrawer", () => {
       <DeveloperEvidenceDrawer
         response={{
           trace_id: "trace_001",
-          live_backend: "powermem_sdk",
-          powermem_connected: true,
+          live_backend: "powercontext_builtin",
+          powercontext_connected: true,
           evidence: {
             request: { actor_id: "driver_primary" },
             privacy: { redaction_count: 1 },
-            data_source: "powermem_sdk",
+            data_source: "powercontext_builtin",
             operations: [
               {
                 type: "SEARCH",
@@ -43,12 +43,12 @@ describe("DeveloperEvidenceDrawer", () => {
       <DeveloperEvidenceDrawer
         response={{
           trace_id: "trace_lifecycle_001",
-          live_backend: "powermem_sdk",
-          powermem_connected: true,
+          live_backend: "powercontext_builtin",
+          powercontext_connected: true,
           evidence: {
             request: { act_key: "Act 10", actor_id: "driver_primary" },
             privacy: { redaction_count: 0, tags: [] },
-            data_source: "powermem_sdk",
+            data_source: "powercontext_builtin",
             operations: [
               {
                 type: "UPDATE",

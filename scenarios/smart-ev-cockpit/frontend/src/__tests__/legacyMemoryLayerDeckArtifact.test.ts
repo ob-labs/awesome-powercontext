@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const deckPath = resolve(
   process.cwd(),
-  "public/powermem-smart-ev-cockpit-deck.html",
+  "public/legacy-memory-layer-smart-ev-cockpit-deck.html",
 );
 
 function extractCssRule(html: string, selector: string) {
@@ -14,7 +14,7 @@ function extractCssRule(html: string, selector: string) {
   return match?.groups?.body ?? "";
 }
 
-describe("PowerMem smart EV cockpit HTML deck artifact", () => {
+describe("legacy memory-layer smart EV cockpit HTML deck artifact", () => {
   it("ships a self-contained 16-slide HTML PPT in the frontend folder", () => {
     expect(existsSync(deckPath)).toBe(true);
 

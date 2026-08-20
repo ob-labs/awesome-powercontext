@@ -1,14 +1,14 @@
 from fastapi import APIRouter, HTTPException, Request
 
-from app.powermem.client import PowerMemConnectionError
-from app.powermem.filtering import (
+from app.powercontext.client import PowerContextConnectionError
+from app.powercontext.filtering import (
     fallback_read_limit,
     needs_server_filter_fallback,
-    powermem_server_filters,
+    powercontext_server_filters,
     record_matches_filters,
     records_matching_filters,
 )
-from app.powermem.mappers import powermem_hit_to_record
+from app.powercontext.mappers import powercontext_hit_to_record
 from app.privacy.projection import project_memory_for_frontend
 
 router = APIRouter(prefix="/api/scenarios/smart-ev-cockpit")
@@ -34,27 +34,27 @@ def memories(
     if lifecycle_status is not None:
         filters["lifecycle_status"] = lifecycle_status
     try:
-        client = request.app.state.container.powermem_client
+        client = request.app.state.container.powercontext_client
         rows = client.list_memories(
             filters=filters,
             user_id=effective_user_id,
             limit=limit,
         )
         records = records_matching_filters(
-            (powermem_hit_to_record(row) for row in rows),
+            (powercontext_hit_to_record(row) for row in rows),
             filters,
         )
         if not records and needs_server_filter_fallback(filters):
             rows = client.list_memories(
-                filters=powermem_server_filters(filters),
+                filters=powercontext_server_filters(filters),
                 user_id=effective_user_id,
                 limit=fallback_read_limit(limit),
             )
             records = records_matching_filters(
-                (powermem_hit_to_record(row) for row in rows),
+                (powercontext_hit_to_record(row) for row in rows),
                 filters,
             )
-    except PowerMemConnectionError as exc:
+    except PowerContextConnectionError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {
         "memories": [
@@ -71,7 +71,7 @@ def delete_memory(
     request: Request,
     user_id: str | None = None,
 ) -> dict:
-    client = request.app.state.container.powermem_client
+    client = request.app.state.container.powercontext_client
     effective_user_id = user_id or actor_id
     filters = {
         "scenario_id": "smart_ev_cockpit",
@@ -88,7 +88,7 @@ def delete_memory(
         owned = _has_matching_memory(rows, filters)
         if not owned and needs_server_filter_fallback(filters):
             rows = client.list_memories(
-                filters=powermem_server_filters(filters),
+                filters=powercontext_server_filters(filters),
                 user_id=effective_user_id,
                 limit=fallback_read_limit(100),
             )
@@ -96,13 +96,13 @@ def delete_memory(
         if not owned:
             raise HTTPException(status_code=404, detail="Memory not found")
         deleted = client.delete_memory(memory_id)
-    except PowerMemConnectionError as exc:
+    except PowerContextConnectionError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {"memory_id": memory_id, "deleted": deleted}
 
 
 def _has_matching_memory(rows: list[dict], filters: dict) -> bool:
     return any(
-        record_matches_filters(powermem_hit_to_record(row), filters)
+        record_matches_filters(powercontext_hit_to_record(row), filters)
         for row in rows
     )

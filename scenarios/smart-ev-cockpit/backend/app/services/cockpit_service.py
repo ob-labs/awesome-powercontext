@@ -5,12 +5,12 @@ from fastapi import HTTPException
 
 from app.domain.memory_models import MemoryOperation, MemoryRecord
 from app.domain.scenario_models import ActRequest, ActResult, ScenarioClock
-from app.powermem.client import (
-    PowerMemConnectionError,
-    PowerMemIngestionError,
-    PowerMemResponseError,
+from app.powercontext.client import (
+    PowerContextConnectionError,
+    PowerContextIngestionError,
+    PowerContextResponseError,
 )
-from app.powermem.queries import build_general_cockpit_query
+from app.powercontext.queries import build_general_cockpit_query
 from app.privacy.projection import project_memory_for_frontend
 from app.privacy.scrubber import scrub_text
 from app.services.act_router import ActRouter, UnknownActError
@@ -99,13 +99,13 @@ class CockpitService:
             try:
                 result = self._handle_chat(routed_request, trace_id)
             except (
-                PowerMemConnectionError,
-                PowerMemIngestionError,
-                PowerMemResponseError,
-            ) as powermem_exc:
+                PowerContextConnectionError,
+                PowerContextIngestionError,
+                PowerContextResponseError,
+            ) as powercontext_exc:
                 raise HTTPException(
-                    status_code=503, detail=str(powermem_exc)
-                ) from powermem_exc
+                    status_code=503, detail=str(powercontext_exc)
+                ) from powercontext_exc
             except LlmConnectionError as llm_exc:
                 raise HTTPException(status_code=503, detail=str(llm_exc)) from llm_exc
             return self._finalize(
@@ -130,9 +130,9 @@ class CockpitService:
         try:
             result, lifecycle = self._run_handler(act_key, context, trace_id)
         except (
-            PowerMemConnectionError,
-            PowerMemIngestionError,
-            PowerMemResponseError,
+            PowerContextConnectionError,
+            PowerContextIngestionError,
+            PowerContextResponseError,
         ) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except LifecycleExecutionError as exc:
@@ -174,9 +174,9 @@ class CockpitService:
         scrubbed = scrub_text(request.text)
         context = ActContext(request=request, container=self.container)
         try:
-            self.container.powermem_client.require_memory()
+            self.container.powercontext_client.require_memory()
             result = act_09_proactive.handle(context, payload)
-        except PowerMemConnectionError as exc:
+        except PowerContextConnectionError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         vehicle_diff = self._apply_vehicle_patch("Act 9", result)
         return self._finalize(
@@ -202,12 +202,12 @@ class CockpitService:
         scrubbed = scrub_text(request.text)
         context = ActContext(request=request, container=self.container)
         try:
-            self.container.powermem_client.require_memory()
+            self.container.powercontext_client.require_memory()
             self.container.scenario_clock.current_day = payload.current_day
             result, lifecycle = self._execute_lifecycle(
                 context, payload.current_day, trace_id
             )
-        except PowerMemConnectionError as exc:
+        except PowerContextConnectionError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except LifecycleExecutionError as exc:
             raise LifecycleMutationError(
@@ -309,8 +309,8 @@ class CockpitService:
             "assistant_reply": result.assistant_reply,
             "redacted_input": scrubbed.text,
             "trace_id": trace_id,
-            "live_backend": "powermem_sdk",
-            "powermem_connected": self.container.powermem_client.is_connected,
+            "live_backend": "powercontext_builtin",
+            "powercontext_connected": self.container.powercontext_client.is_connected,
             "data_source": result.data_source,
             "operations": operations,
             "memory_hits": projected_hits,
@@ -333,12 +333,12 @@ class CockpitService:
             return _HANDLERS[act_key](context), None
         if act_key == "Chat":
             return self._handle_chat(context.request, trace_id), None
-        self.container.powermem_client.require_memory()
+        self.container.powercontext_client.require_memory()
         self.container.scenario_clock.current_day = 90
         return self._execute_lifecycle(context, 90, trace_id)
 
     def _handle_chat(self, request: ActRequest, trace_id: str) -> ActResult:
-        ingestion = ChatMemoryService(self.container.powermem_client).ingest(
+        ingestion = ChatMemoryService(self.container.powercontext_client).ingest(
             request=request,
             trace_id=trace_id,
         )
@@ -378,7 +378,7 @@ class CockpitService:
                     for mutation in ingestion.mutations
                 )
                 raise LlmConnectionError(
-                    "PowerMem mutation succeeded "
+                    "PowerContext mutation succeeded "
                     f"({summary}), but LLM chat generation failed: {exc}"
                 ) from exc
             raise
@@ -389,7 +389,7 @@ class CockpitService:
             selected_memory_ids=[memory.memory_id for memory in memory_hits],
             reason_codes=["llm_chat"],
             operations=operations,
-            data_source="powermem_sdk+llm",
+            data_source="powercontext_builtin+llm",
         )
 
     def _handle_memory_chat_fallback(
@@ -410,7 +410,7 @@ class CockpitService:
             selected_memory_ids=[memory.memory_id for memory in memory_hits],
             reason_codes=["memory_chat_fallback"],
             operations=operations,
-            data_source="powermem_chat_fallback",
+            data_source="powercontext_chat_fallback",
         )
 
     def _search_general_chat_memories(
@@ -418,7 +418,7 @@ class CockpitService:
         request: ActRequest,
         operations: list[MemoryOperation],
     ) -> list[MemoryRecord]:
-        if not self.container.powermem_client.is_connected:
+        if not self.container.powercontext_client.is_connected:
             return []
 
         query = build_general_cockpit_query(
@@ -427,7 +427,7 @@ class CockpitService:
             request.seat_position,
             request.user_id,
         )
-        memory_hits = MemoryService(self.container.powermem_client).search(
+        memory_hits = MemoryService(self.container.powercontext_client).search(
             query=query.query,
             filters=query.filters,
             limit=query.limit,
@@ -537,8 +537,8 @@ class CockpitService:
             "assistant_reply": "Lifecycle execution stopped after a mutation failure.",
             "redacted_input": scrubbed.text,
             "trace_id": trace_id,
-            "live_backend": "powermem_sdk",
-            "powermem_connected": self.container.powermem_client.is_connected,
+            "live_backend": "powercontext_builtin",
+            "powercontext_connected": self.container.powercontext_client.is_connected,
             "data_source": "scenario_seed",
             "operations": operations,
             "memory_hits": projected_hits,

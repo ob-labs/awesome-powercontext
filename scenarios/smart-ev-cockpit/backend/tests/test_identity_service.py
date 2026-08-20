@@ -1,5 +1,5 @@
 from app.domain.memory_models import MemoryMetadata, MemoryRecord
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.services.identity_service import IdentityService
 
 
@@ -71,7 +71,7 @@ def test_identity_service_persists_updated_user_binding(tmp_path):
     assert reloaded.profile_note == "Temporary demo driver"
 
 
-def test_identity_service_builds_powermem_profile_summary_for_bound_user(tmp_path):
+def test_identity_service_builds_powercontext_profile_summary_for_bound_user(tmp_path):
     memory = ProfileMemory(
         [
             _memory(
@@ -91,7 +91,7 @@ def test_identity_service_builds_powermem_profile_summary_for_bound_user(tmp_pat
 
     profile = service.get_profile(
         "driver_primary",
-        powermem_client=PowerMemClient(memory),
+        powercontext_client=PowerContextClient(memory),
     )
 
     assert memory.get_all_calls[0]["user_id"] == "guest_alex"

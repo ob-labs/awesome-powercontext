@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Body, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.powermem.client import PowerMemConnectionError
+from app.powercontext.client import PowerContextConnectionError
 from app.services.test_data_service import DEFAULT_IMPORT_MAX_WORKERS
 
 router = APIRouter(prefix="/api/scenarios/smart-ev-cockpit/test-data")
@@ -42,8 +42,8 @@ def generate_test_data(payload: GenerateTestDataRequest, request: Request) -> di
 def import_test_data(payload: ImportTestDataRequest, request: Request) -> dict:
     container = request.app.state.container
     try:
-        memory = container.powermem_client.require_memory()
-    except PowerMemConnectionError as exc:
+        memory = container.powercontext_client.require_memory()
+    except PowerContextConnectionError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     if not container.test_data_service.dataset_exists(payload.dataset_id):
@@ -73,8 +73,8 @@ def clear_all_test_data(
     payload = payload or DeleteTestDataRequest()
     container = request.app.state.container
     try:
-        memory = container.powermem_client.require_memory()
-    except PowerMemConnectionError as exc:
+        memory = container.powercontext_client.require_memory()
+    except PowerContextConnectionError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     status = container.test_data_service.clear_all_memories(
@@ -93,8 +93,8 @@ def delete_test_dataset(
     payload = payload or DeleteTestDataRequest()
     container = request.app.state.container
     try:
-        memory = container.powermem_client.require_memory()
-    except PowerMemConnectionError as exc:
+        memory = container.powercontext_client.require_memory()
+    except PowerContextConnectionError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     status = container.test_data_service.delete_dataset(

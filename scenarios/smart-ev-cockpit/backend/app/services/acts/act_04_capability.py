@@ -17,7 +17,7 @@ def handle(context: ActContext) -> ActResult:
         "vehicle_id": "demo_vehicle_001",
         "memory_kind": "vehicle_capability",
     }
-    hits = MemoryService(context.container.powermem_client).search(
+    hits = MemoryService(context.container.powercontext_client).search(
         query=query,
         filters=filters,
         limit=10,

@@ -60,8 +60,8 @@ describe("buildProjectionScene", () => {
 const liveResponse: ScenarioResponse = {
   assistant_reply: "Warming cabin from live memory.",
   trace_id: "trace_live_123",
-  live_backend: "powermem_sdk",
-  powermem_connected: true,
+  live_backend: "powercontext_builtin",
+  powercontext_connected: true,
   operations: [{ type: "search", hit_count: 1 }],
   memory_hits: [
     {
@@ -92,7 +92,7 @@ const liveResponse: ScenarioResponse = {
   evidence: {},
 };
 
-it("uses live PowerMem response data when available", () => {
+it("uses live PowerContext response data when available", () => {
   const projection = buildProjectionScene({
     step,
     response: liveResponse,
@@ -128,7 +128,7 @@ it("uses live PowerMem response data when available", () => {
     {
       label: "Action",
       value: "Driver zone 22°C -> 26°C, seat heat 0 -> 2",
-      detail: "PowerMem restores the remembered comfort setup on the vehicle.",
+      detail: "PowerContext restores the remembered comfort setup on the vehicle.",
     },
   ]);
   expect(projection.climateAction).toEqual({
@@ -397,8 +397,8 @@ it("switches to navigation projection when vehicle state enters map mode", () =>
   const navigationResponse: ScenarioResponse = {
     assistant_reply: "已切换到地图模式，开始导航到张江科学城。",
     trace_id: "trace_navigation_confirmed",
-    live_backend: "powermem_sdk",
-    powermem_connected: true,
+    live_backend: "powercontext_builtin",
+    powercontext_connected: true,
     operations: [{ type: "search", hit_count: 1 }],
     memory_hits: [
       {
@@ -580,8 +580,8 @@ it("renders ordinary LLM chat as an assistant reply instead of an action project
     assistant_reply:
       "当前车外温度为 6°C，车内温度为 22°C。由于系统不提供实时天气信息，建议您查看手机天气应用或车载导航的天气插件获取详细预报。",
     trace_id: "trace_chat_weather",
-    live_backend: "powermem_sdk+llm",
-    powermem_connected: true,
+    live_backend: "powercontext_builtin+llm",
+    powercontext_connected: true,
     operations: [
       { type: "search", hit_count: 0 },
       { type: "chat" },
@@ -619,7 +619,7 @@ it("shows live-mode errors without fake memory content", () => {
   const projection = buildProjectionScene({
     step,
     response: null,
-    liveError: "PowerMem is not connected",
+    liveError: "PowerContext is not connected",
     selectedActorId: "driver_primary",
     locale: "en",
   });

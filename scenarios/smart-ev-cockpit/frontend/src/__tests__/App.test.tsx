@@ -42,8 +42,8 @@ vi.mock("../api/smartEvCockpit", () => ({
 const liveResponse: ScenarioResponse = {
   assistant_reply: "Warming cabin from live memory.",
   trace_id: "trace_live_123",
-  live_backend: "powermem_sdk",
-  powermem_connected: true,
+  live_backend: "powercontext_builtin",
+  powercontext_connected: true,
   operations: [],
   memory_hits: [
     {
@@ -63,7 +63,7 @@ const liveResponse: ScenarioResponse = {
   evidence: {
     request: { actor_id: "driver_primary" },
     privacy: { redaction_count: 0 },
-    data_source: "powermem_sdk",
+    data_source: "powercontext_builtin",
     operations: [
       {
         type: "SEARCH",
@@ -232,25 +232,25 @@ describe("App live API integration", () => {
       /^数据生成$/,
     );
     expect(
-      screen.getByRole("button", { name: /清空 PowerMem 数据库全部记忆/ }),
+      screen.getByRole("button", { name: /清空 PowerContext 数据库全部记忆/ }),
     ).toHaveTextContent(/^数据清理$/);
     expect(
-      screen.queryByRole("button", { name: /导入到 PowerMem/ }),
+      screen.queryByRole("button", { name: /导入到 PowerContext/ }),
     ).not.toBeInTheDocument();
   });
 
-  it("opens the embedded PowerMem PPT from the top-right entry", async () => {
+  it("opens the legacy PowerMem PPT from the top-right entry", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: /打开 PowerMem PPT/ }));
+    await user.click(screen.getByRole("button", { name: /打开旧版 PowerMem PPT/ }));
 
     expect(
-      screen.getByRole("dialog", { name: "PowerMem(汽车智能座舱记忆方案)" }),
+      screen.getByRole("dialog", { name: "旧版 PowerMem 汽车智能座舱记忆方案" }),
     ).toBeInTheDocument();
-    expect(screen.getByTitle("PowerMem smart EV cockpit PPT")).toHaveAttribute(
+    expect(screen.getByTitle("Legacy PowerMem smart EV cockpit PPT")).toHaveAttribute(
       "src",
-      "/powermem-smart-ev-cockpit-deck.html",
+      "/legacy-memory-layer-smart-ev-cockpit-deck.html",
     );
   });
 
@@ -342,11 +342,11 @@ describe("App live API integration", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Import failed");
     expect(screen.getByText(generatedTestDataStatus.dataset_id!)).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /清空 PowerMem 数据库全部记忆/ }),
+      screen.getByRole("button", { name: /清空 PowerContext 数据库全部记忆/ }),
     ).toBeEnabled();
   });
 
-  it("clears the entire PowerMem database without a current dataset", async () => {
+  it("clears the entire PowerContext database without a current dataset", async () => {
     vi.mocked(clearAllTestData).mockResolvedValue({
       ...idleTestDataStatus,
       state: "deleted",
@@ -356,7 +356,7 @@ describe("App live API integration", () => {
     render(<App />);
 
     const clearButton = await screen.findByRole("button", {
-      name: /清空 PowerMem 数据库全部记忆/,
+      name: /清空 PowerContext 数据库全部记忆/,
     });
     expect(clearButton).toBeEnabled();
     await user.click(clearButton);
@@ -369,10 +369,10 @@ describe("App live API integration", () => {
 
     expect(screen.getByLabelText("智能电动车座舱场景")).toBeInTheDocument();
     expect(
-      screen.queryByLabelText("PowerMem 全息证据投影"),
+      screen.queryByLabelText("PowerContext 全息证据投影"),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByLabelText("车机屏幕 PowerMem 摘要"),
+      screen.getByLabelText("车机屏幕 PowerContext 摘要"),
     ).toBeInTheDocument();
     expect(screen.getByText("建立偏好")).toBeInTheDocument();
   });
@@ -415,7 +415,7 @@ describe("App live API integration", () => {
     await user.click(screen.getByRole("button", { name: /打开实时证据/ }));
 
     expect(screen.getByRole("dialog", { name: "实时证据控制台" })).toBeInTheDocument();
-    expect(screen.getByText("PowerMem 记忆流")).toBeInTheDocument();
+    expect(screen.getByText("PowerContext 记忆流")).toBeInTheDocument();
     expect(screen.getByText("车辆上下文")).toBeInTheDocument();
     expect(screen.getByText("推荐")).toBeInTheDocument();
     expect(screen.getByLabelText("记忆生命周期时间线")).toBeInTheDocument();
@@ -437,14 +437,14 @@ describe("App live API integration", () => {
 
     expect(screen.getByRole("button", { name: /open live evidence/i })).toBeInTheDocument();
     expect(screen.queryByLabelText("Cockpit status")).not.toBeInTheDocument();
-    expect(screen.queryByText("PowerMem Memory Flow")).not.toBeInTheDocument();
+    expect(screen.queryByText("PowerContext Memory Flow")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Memory lifecycle timeline")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /open live evidence/i }));
 
     expect(screen.getByRole("dialog", { name: /live evidence console/i })).toBeInTheDocument();
     expect(screen.getByLabelText("Cockpit status")).toBeInTheDocument();
-    expect(screen.getByText("PowerMem Memory Flow")).toBeInTheDocument();
+    expect(screen.getByText("PowerContext Memory Flow")).toBeInTheDocument();
     expect(screen.getByLabelText("Memory lifecycle timeline")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /close evidence/i }));
@@ -470,11 +470,11 @@ describe("App live API integration", () => {
     ).toBeInTheDocument();
     expect(
       within(dataBar).getByRole("button", {
-        name: /清空 PowerMem 数据库全部记忆/,
+        name: /清空 PowerContext 数据库全部记忆/,
       }),
     ).toBeInTheDocument();
     expect(
-      within(dataBar).queryByRole("button", { name: /导入到 PowerMem/ }),
+      within(dataBar).queryByRole("button", { name: /导入到 PowerContext/ }),
     ).not.toBeInTheDocument();
     expect(
       within(dataBar).getByRole("button", { name: /打开实时证据/ }),
@@ -492,7 +492,7 @@ describe("App live API integration", () => {
     expect(
       within(stage).getByRole("combobox", { name: "内饰颜色选择" }),
     ).toHaveValue("ivory");
-    expect(within(stage).getByLabelText("PowerMem 全景车机屏幕")).toBeInTheDocument();
+    expect(within(stage).getByLabelText("PowerContext 全景车机屏幕")).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", {
       name: /cockpit memory command center/i,
@@ -586,10 +586,10 @@ describe("App live API integration", () => {
     );
     expect(await within(chatLog).findByText("今天车里有点冷。")).toBeInTheDocument();
     expect(await within(chatLog).findByText("Warming cabin from live memory.")).toBeInTheDocument();
-    expect(within(floatingChat).queryByText("提交一句语音指令，启动实时 PowerMem 追踪。")).not.toBeInTheDocument();
+    expect(within(floatingChat).queryByText("提交一句语音指令，启动实时 PowerContext 追踪。")).not.toBeInTheDocument();
   });
 
-  it("labels free-form preference chat from the real PowerMem ADD operation", async () => {
+  it("labels free-form preference chat from the real PowerContext ADD operation", async () => {
     vi.mocked(executeScenarioStep).mockResolvedValue({
       ...liveResponse,
       act_key: "Chat",
@@ -621,7 +621,7 @@ describe("App live API integration", () => {
       text: "I like coffee",
       session_id: "demo_session_001",
     });
-    expect(await screen.findByText("PowerMem ADD + LLM")).toBeInTheDocument();
+    expect(await screen.findByText("PowerContext ADD + LLM")).toBeInTheDocument();
   });
 
   it("keeps the cockpit visible when a random chat response omits evidence arrays", async () => {
@@ -629,8 +629,8 @@ describe("App live API integration", () => {
       act_key: "Chat",
       assistant_reply: "我可以继续作为座舱助手回答这个随机问题。",
       trace_id: "trace_random_chat",
-      live_backend: "powermem_sdk",
-      powermem_connected: true,
+      live_backend: "powercontext_builtin",
+      powercontext_connected: true,
       vehicle_state: {},
       evidence: {},
     } as ScenarioResponse);
@@ -657,7 +657,7 @@ describe("App live API integration", () => {
       await within(chatLog).findByText("我可以继续作为座舱助手回答这个随机问题。"),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("智能电动车座舱场景")).toBeInTheDocument();
-    expect(screen.getByLabelText("车机屏幕 PowerMem 摘要")).toBeInTheDocument();
+    expect(screen.getByLabelText("车机屏幕 PowerContext 摘要")).toBeInTheDocument();
   });
 
   it("loads separate chat history when the selected occupant changes", async () => {
@@ -786,7 +786,7 @@ describe("App live API integration", () => {
 
     expect(within(chatLog).queryByText("驾驶员历史消息")).not.toBeInTheDocument();
     expect(
-      within(chatLog).getByText("提交一句语音指令，启动实时 PowerMem 追踪。"),
+      within(chatLog).getByText("提交一句语音指令，启动实时 PowerContext 追踪。"),
     ).toBeInTheDocument();
   });
 
@@ -867,7 +867,7 @@ describe("App live API integration", () => {
     await switchToEnglish(user);
 
     const stage = screen.getByLabelText("Smart EV cockpit scene");
-    const display = within(stage).getByLabelText("Panoramic PowerMem display");
+    const display = within(stage).getByLabelText("Panoramic PowerContext display");
     await user.click(within(display).getByRole("button", { name: "Previous scene" }));
 
     expect(screen.getByText("Lifecycle and privacy")).toBeInTheDocument();
@@ -941,7 +941,7 @@ describe("App live API integration", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const display = screen.getByLabelText("PowerMem 全景车机屏幕");
+    const display = screen.getByLabelText("PowerContext 全景车机屏幕");
     await user.click(within(display).getByRole("button", { name: "下一个场景" }));
     expect(screen.getByRole("textbox", { name: "语音指令" })).toHaveValue(
       "车里有点热。",
@@ -1008,7 +1008,7 @@ describe("App live API integration", () => {
     await switchToEnglish(user);
 
     const stage = screen.getByLabelText("Smart EV cockpit scene");
-    const display = within(stage).getByLabelText("Panoramic PowerMem display");
+    const display = within(stage).getByLabelText("Panoramic PowerContext display");
     const nextSceneButton = within(display).getByRole("button", {
       name: "Next scene",
     });
@@ -1062,7 +1062,7 @@ describe("App live API integration", () => {
     await switchToEnglish(user);
 
     const display = within(screen.getByLabelText("Smart EV cockpit scene")).getByLabelText(
-      "Panoramic PowerMem display",
+      "Panoramic PowerContext display",
     );
     const nextSceneButton = within(display).getByRole("button", {
       name: "Next scene",
@@ -1119,7 +1119,7 @@ describe("App live API integration", () => {
     });
   });
 
-  it("submits utterances with the selected PowerMem user id binding", async () => {
+  it("submits utterances with the selected PowerContext user id binding", async () => {
     vi.mocked(getUserIdentities).mockResolvedValue({
       identities: [
         {
@@ -1158,7 +1158,7 @@ describe("App live API integration", () => {
     });
   });
 
-  it("edits the selected occupant PowerMem user binding from the profile panel", async () => {
+  it("edits the selected occupant PowerContext user binding from the profile panel", async () => {
     const alexIdentity = {
       ...defaultIdentities[0],
       user_id: "guest_alex",
@@ -1199,7 +1199,7 @@ describe("App live API integration", () => {
     expect(within(panel).getByText("person_profile 1")).toBeInTheDocument();
 
     const userIdInput = within(panel).getByRole("textbox", {
-      name: "PowerMem user_id",
+      name: "PowerContext user_id",
     });
     const displayNameInput = within(panel).getByRole("textbox", {
       name: "显示名称",
@@ -1264,7 +1264,7 @@ describe("App live API integration", () => {
     );
 
     const stage = screen.getByLabelText("Smart EV cockpit scene");
-    const display = within(stage).getByLabelText("Panoramic PowerMem display");
+    const display = within(stage).getByLabelText("Panoramic PowerContext display");
     const nextSceneButton = within(display).getByRole("button", {
       name: "Next scene",
     });
@@ -1276,7 +1276,7 @@ describe("App live API integration", () => {
       screen.getByLabelText("Manual cockpit keys").querySelector(".manual-cockpit-keys__day"),
     ).toBeNull();
     expect(
-      within(display).getByLabelText("PowerMem projection summary"),
+      within(display).getByLabelText("PowerContext projection summary"),
     ).toHaveTextContent("Driving mode");
     expect(
       within(display).queryByRole("button", { name: /day 56 act 8/i }),
@@ -1376,7 +1376,7 @@ describe("App live API integration", () => {
   });
 
   it("shows a live error when the backend rejects the utterance", async () => {
-    vi.mocked(executeScenarioStep).mockRejectedValue(new Error("PowerMem is not connected"));
+    vi.mocked(executeScenarioStep).mockRejectedValue(new Error("PowerContext is not connected"));
     const user = userEvent.setup();
     render(<App />);
     await switchToEnglish(user);
@@ -1385,7 +1385,7 @@ describe("App live API integration", () => {
 
     await user.click(screen.getByRole("button", { name: /open live evidence/i }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("PowerMem is not connected");
+    expect(await screen.findByRole("alert")).toHaveTextContent("PowerContext is not connected");
     expect(screen.queryByLabelText("Developer evidence drawer")).not.toBeInTheDocument();
   });
 });

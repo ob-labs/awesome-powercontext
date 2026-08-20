@@ -244,7 +244,7 @@ class TestDataService:
                 memory_id = str(row.get("id", ""))
                 if not memory_id:
                     self._increment_status("failed_count")
-                    self._update_status(last_error="PowerMem returned a memory without an id.")
+                    self._update_status(last_error="PowerContext returned a memory without an id.")
                     continue
                 if memory_id in deleted_ids:
                     self._increment_status("failed_count")
@@ -260,7 +260,7 @@ class TestDataService:
                     else:
                         self._increment_status("failed_count")
                         self._update_status(
-                            last_error=f"PowerMem did not delete memory {memory_id}."
+                            last_error=f"PowerContext did not delete memory {memory_id}."
                         )
                 except Exception as exc:  # pragma: no cover - exercised through live API
                     self._increment_status("failed_count")
@@ -518,7 +518,7 @@ class TestDataService:
                 if retry_after is not None:
                     delay = max(delay, retry_after)
                 logger.warning(
-                    "Embedding request rate limited; retrying in %.1fs (%d/%d)",
+                    "Memory backend rate limited; retrying in %.1fs (%d/%d)",
                     delay,
                     retry_index + 1,
                     self._rate_limit_max_retries,

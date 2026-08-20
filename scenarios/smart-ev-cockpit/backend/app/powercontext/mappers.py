@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from app.domain.memory_models import MemoryMetadata, MemoryRecord
 
 
-def powermem_hit_to_record(hit: dict) -> MemoryRecord:
+def powercontext_hit_to_record(hit: dict) -> MemoryRecord:
     metadata = MemoryMetadata.model_validate(_metadata_with_created_at(hit))
     return MemoryRecord(
         memory_id=str(hit.get("id", hit.get("memory_id", ""))),

@@ -7,7 +7,7 @@ from app.data.csv_snapshot_loader import SnapshotResult
 from app.dependencies import AppContainer
 from app.domain.memory_models import MemoryMetadata, MemoryRecord
 from app.main import create_app
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.services.chat_history_service import ChatHistoryService
 
 
@@ -25,7 +25,7 @@ def _record(memory_id: str, kind: str, **updates) -> MemoryRecord:
     )
 
 
-class OrchestrationPowerMem:
+class OrchestrationPowerContext:
     def __init__(self):
         self.records = [
             _record(
@@ -123,7 +123,7 @@ class OrchestrationPowerMem:
         return True
 
 
-class MetadataFilterLimitedOrchestrationPowerMem(OrchestrationPowerMem):
+class MetadataFilterLimitedOrchestrationPowerContext(OrchestrationPowerContext):
     def search(self, **kwargs):
         self.search_calls.append(kwargs)
         filters = kwargs["filters"]
@@ -167,9 +167,9 @@ def _raw(record: MemoryRecord) -> dict:
 
 
 def _client(tmp_path: Path, memory=None, llm_client=None):
-    raw_memory = memory or OrchestrationPowerMem()
+    raw_memory = memory or OrchestrationPowerContext()
     container = AppContainer(
-        powermem_client=PowerMemClient(raw_memory),
+        powercontext_client=PowerContextClient(raw_memory),
         llm_client=llm_client,
         chat_history_service=ChatHistoryService(tmp_path / "chat.sqlite3"),
     )
@@ -285,7 +285,7 @@ def test_act_1_saves_preference_and_applies_cabin_state(tmp_path):
 
 
 def test_act_2_applies_remembered_temperature_from_reported_hot_cabin_context(tmp_path):
-    memory = OrchestrationPowerMem()
+    memory = OrchestrationPowerContext()
     memory.records[0] = _record(
         "cabin",
         "cabin_control_preference",
@@ -379,7 +379,7 @@ def test_act_9_utter_requires_vehicle_event_endpoint(tmp_path):
     assert "/events/vehicle" in response.json()["detail"]
 
 
-def test_scripted_flow_never_adds_raw_dialogue_to_powermem(tmp_path):
+def test_scripted_flow_never_adds_raw_dialogue_to_powercontext(tmp_path):
     client, memory = _client(tmp_path)
 
     response = client.post(
@@ -447,7 +447,7 @@ def test_llm_failure_does_not_change_deterministic_reply(tmp_path):
 
 
 def test_memories_forwards_filters_and_projects_private_content(tmp_path):
-    memory = OrchestrationPowerMem()
+    memory = OrchestrationPowerContext()
     memory.records = [
         _record(
             "private-location",
@@ -488,7 +488,7 @@ def test_memories_forwards_filters_and_projects_private_content(tmp_path):
 
 
 def test_memories_requires_actor_id_and_defensively_isolates_cross_actor_rows(tmp_path):
-    memory = OrchestrationPowerMem()
+    memory = OrchestrationPowerContext()
     memory.records = [
         _record("driver-memory", "driving_preference"),
         _record(
@@ -513,8 +513,8 @@ def test_memories_requires_actor_id_and_defensively_isolates_cross_actor_rows(tm
     assert memory.get_all_calls[0]["user_id"] == "driver_primary"
 
 
-def test_memories_recovers_when_powermem_does_not_support_metadata_filters(tmp_path):
-    memory = MetadataFilterLimitedOrchestrationPowerMem()
+def test_memories_recovers_when_powercontext_does_not_support_metadata_filters(tmp_path):
+    memory = MetadataFilterLimitedOrchestrationPowerContext()
     memory.records = [
         _record(
             "driver-location",
@@ -558,7 +558,7 @@ def test_memories_recovers_when_powermem_does_not_support_metadata_filters(tmp_p
 
 
 def test_vehicle_event_returns_normalized_low_soc_diff_projection_and_journal(tmp_path):
-    memory = OrchestrationPowerMem()
+    memory = OrchestrationPowerContext()
     memory.records = [
         _record(
             "private-charging",
@@ -592,7 +592,7 @@ def test_vehicle_event_returns_normalized_low_soc_diff_projection_and_journal(tm
 
 
 def test_lifecycle_endpoint_returns_normalized_projection_and_journal(tmp_path):
-    memory = OrchestrationPowerMem()
+    memory = OrchestrationPowerContext()
     memory.records = [
         _record(
             "private-temporary",
@@ -641,11 +641,11 @@ def test_lifecycle_endpoint_returns_normalized_projection_and_journal(tmp_path):
         ),
     ],
 )
-def test_live_endpoints_return_503_when_powermem_is_disconnected(
+def test_live_endpoints_return_503_when_powercontext_is_disconnected(
     tmp_path, method, path, kwargs
 ):
     container = AppContainer(
-        powermem_client=PowerMemClient(None),
+        powercontext_client=PowerContextClient(None),
         chat_history_service=ChatHistoryService(tmp_path / "chat.sqlite3"),
     )
     client = TestClient(create_app(container=container), raise_server_exceptions=False)
@@ -654,5 +654,5 @@ def test_live_endpoints_return_503_when_powermem_is_disconnected(
     response = getattr(client, method)(path, **kwargs)
 
     assert response.status_code == 503
-    assert "PowerMem is not connected" in response.json()["detail"]
+    assert "PowerContext is not connected" in response.json()["detail"]
     assert container.vehicle_state_service.current_state() == before

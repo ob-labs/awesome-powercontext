@@ -1,5 +1,7 @@
 from pathlib import Path
+from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -8,7 +10,12 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
 
 class Settings(BaseSettings):
     scenario_id: str = "smart_ev_cockpit"
-    powermem_backend: str = "local_sdk"
+    powercontext_backend: Literal["builtin"] = "builtin"
+    powercontext_scope_id: str = "smart-ev-cockpit"
+    powercontext_database_url: str = (
+        "sqlite+aiosqlite:///data/powercontext_smart_ev.db"
+    )
+    powercontext_operation_timeout_seconds: float = Field(default=30.0, gt=0)
     demo_privacy_mode: str = "strict"
     llm_provider: str = "openai"
     llm_model: str | None = None

@@ -7,7 +7,7 @@ SERVER_FILTER_KEYS = {"scenario_id", "vehicle_id"}
 FALLBACK_READ_LIMIT = 2000
 
 
-def powermem_server_filters(filters: dict | None) -> dict:
+def powercontext_server_filters(filters: dict | None) -> dict:
     if not filters:
         return {}
     return {
@@ -19,7 +19,7 @@ def powermem_server_filters(filters: dict | None) -> dict:
 
 def needs_server_filter_fallback(filters: dict | None) -> bool:
     requested = filters or {}
-    return requested != powermem_server_filters(requested)
+    return requested != powercontext_server_filters(requested)
 
 
 def fallback_read_limit(limit: int) -> int:

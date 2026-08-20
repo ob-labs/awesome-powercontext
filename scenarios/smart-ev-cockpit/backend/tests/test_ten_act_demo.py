@@ -6,7 +6,7 @@ from app.data.csv_snapshot_loader import SnapshotResult
 from app.dependencies import AppContainer
 from app.domain.memory_models import MemoryMetadata, MemoryRecord
 from app.main import create_app
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.services.chat_history_service import ChatHistoryService
 
 
@@ -24,7 +24,7 @@ def _record(memory_id: str, kind: str, **updates) -> MemoryRecord:
     )
 
 
-class TenActDemoPowerMem:
+class TenActDemoPowerContext:
     def __init__(self):
         self.records = [
             _record(
@@ -165,9 +165,9 @@ def _raw(record: MemoryRecord) -> dict:
 
 
 def _client(tmp_path: Path):
-    raw_memory = TenActDemoPowerMem()
+    raw_memory = TenActDemoPowerContext()
     container = AppContainer(
-        powermem_client=PowerMemClient(raw_memory),
+        powercontext_client=PowerContextClient(raw_memory),
         chat_history_service=ChatHistoryService(tmp_path / "chat.sqlite3"),
     )
     container.csv_snapshot_loader = SnapshotLoader()
@@ -271,7 +271,7 @@ def test_ten_act_presenter_sequence_matches_live_contract(tmp_path):
 
     observed_acts = [response["act_key"] for response in responses]
     assert observed_acts == [f"Act {index}" for index in range(1, 11)]
-    assert all(response["powermem_connected"] for response in responses)
+    assert all(response["powercontext_connected"] for response in responses)
     assert all(response["evidence"]["operations"] for response in responses)
     assert responses[8]["vehicle_state"]["soc"] < 20
     assert {"UPDATE", "DELETE"} <= {

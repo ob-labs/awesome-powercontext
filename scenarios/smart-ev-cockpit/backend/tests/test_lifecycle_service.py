@@ -1,10 +1,10 @@
 import pytest
 
 from app.domain.memory_models import MemoryMetadata, MemoryRecord
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.services.lifecycle_service import LifecycleService
 from app.services.vehicle_state_service import VehicleStateService
-from tests.fakes import CrudPowerMem, memory_record
+from tests.fakes import CrudPowerContext, memory_record
 
 
 def test_day_90_decays_expired_temporary_memory():
@@ -77,8 +77,8 @@ def test_plan_keeps_durable_preferences_and_plans_temporary_mutations():
 
 
 def test_execute_uses_original_non_empty_content_and_real_delete():
-    fake = CrudPowerMem()
-    service = LifecycleService(PowerMemClient(fake))
+    fake = CrudPowerContext()
+    service = LifecycleService(PowerContextClient(fake))
     memories = [
         memory_record(
             "update",
@@ -147,7 +147,7 @@ def test_delete_parses_generator_iso_datetime_formats(valid_until, should_delete
     assert any(operation.type == "DELETE" for operation in plan) is should_delete
 
 
-class UpdateResultPowerMem(CrudPowerMem):
+class UpdateResultPowerContext(CrudPowerContext):
     def __init__(self, update_result):
         super().__init__()
         self.update_result = update_result
@@ -164,8 +164,8 @@ class UpdateResultPowerMem(CrudPowerMem):
     [None, False, {}, {"success": False}, {"error": "update rejected"}],
 )
 def test_update_non_success_response_stops_and_reports_failure(update_result):
-    fake = UpdateResultPowerMem(update_result)
-    service = LifecycleService(PowerMemClient(fake))
+    fake = UpdateResultPowerContext(update_result)
+    service = LifecycleService(PowerContextClient(fake))
 
     with pytest.raises(Exception) as caught:
         service.run(
@@ -195,10 +195,10 @@ def test_update_non_success_response_stops_and_reports_failure(update_result):
         },
     ],
 )
-def test_update_accepts_real_powermem_success_shapes(update_result):
-    fake = UpdateResultPowerMem(update_result)
+def test_update_accepts_real_powercontext_success_shapes(update_result):
+    fake = UpdateResultPowerContext(update_result)
 
-    result = LifecycleService(PowerMemClient(fake)).run(
+    result = LifecycleService(PowerContextClient(fake)).run(
         [memory_record("a", metadata_updates={"retention_score": 0.8})],
         current_day=90,
     )
@@ -208,8 +208,8 @@ def test_update_accepts_real_powermem_success_shapes(update_result):
 
 
 def test_empty_content_is_not_planned_for_update_and_is_audited_as_skipped():
-    fake = CrudPowerMem()
-    service = LifecycleService(PowerMemClient(fake))
+    fake = CrudPowerContext()
+    service = LifecycleService(PowerContextClient(fake))
     memory = memory_record(
         "empty",
         content="   ",
@@ -235,8 +235,8 @@ def test_empty_content_is_not_planned_for_update_and_is_audited_as_skipped():
 
 
 def test_run_reports_no_candidate_audit_when_lifecycle_has_nothing_to_mutate():
-    fake = CrudPowerMem()
-    service = LifecycleService(PowerMemClient(fake))
+    fake = CrudPowerContext()
+    service = LifecycleService(PowerContextClient(fake))
 
     result = service.run(
         [
@@ -267,8 +267,8 @@ def test_run_reports_no_candidate_audit_when_lifecycle_has_nothing_to_mutate():
 
 
 def test_run_reports_no_candidate_audit_when_temporary_memories_are_not_due():
-    fake = CrudPowerMem()
-    service = LifecycleService(PowerMemClient(fake))
+    fake = CrudPowerContext()
+    service = LifecycleService(PowerContextClient(fake))
 
     result = service.run(
         [
@@ -289,7 +289,7 @@ def test_run_reports_no_candidate_audit_when_temporary_memories_are_not_due():
     assert result.audit[0]["result"] == "no_candidates"
 
 
-class FailingCrudPowerMem(CrudPowerMem):
+class FailingCrudPowerContext(CrudPowerContext):
     def update(self, *, memory_id: str, content: str, metadata: dict) -> dict:
         if memory_id == "b":
             raise RuntimeError("planned failure")
@@ -297,8 +297,8 @@ class FailingCrudPowerMem(CrudPowerMem):
 
 
 def test_run_precomputes_deterministic_plan_and_stops_with_partial_progress():
-    fake = FailingCrudPowerMem()
-    service = LifecycleService(PowerMemClient(fake))
+    fake = FailingCrudPowerContext()
+    service = LifecycleService(PowerContextClient(fake))
     memories = [
         memory_record("c", metadata_updates={"retention_score": 0.8}),
         memory_record("b", metadata_updates={"retention_score": 0.8}),

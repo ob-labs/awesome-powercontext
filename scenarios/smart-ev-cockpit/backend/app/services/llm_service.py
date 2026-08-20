@@ -77,13 +77,13 @@ class OpenAICompatibleLlmClient:
                 "content": (
                     "You are the assistant in a smart EV cockpit demo. Answer the user "
                     "directly in the same language as the user. Use the provided vehicle "
-                    "state and PowerMem memory hits when relevant. Do not claim access to "
+                    "state and PowerContext memory hits when relevant. Do not claim access to "
                     "live internet, live weather, or external tools. If the user asks for "
                     "real-time weather, say that live weather is unavailable and mention "
                     "vehicle sensor readings if useful. Only claim a memory was saved when "
                     "an ADD mutation is present. Only claim a memory was updated when an "
                     "UPDATE mutation is present. Only claim a memory was deleted when a "
-                    "DELETE mutation is present. A SEARCH hit or PowerMem connectivity is "
+                    "DELETE mutation is present. A SEARCH hit or PowerContext connectivity is "
                     "not proof that this turn was saved. Do not describe an ADD, UPDATE, "
                     "or DELETE unless that exact mutation is present. Keep the answer "
                     "concise."
@@ -95,8 +95,8 @@ class OpenAICompatibleLlmClient:
                     f"actor_id: {actor_id}\n"
                     f"seat_position: {seat_position}\n"
                     f"vehicle_state: {vehicle_state}\n"
-                    f"powermem_memory_hits: {memory_hits}\n"
-                    f"powermem_memory_mutations: {memory_mutations}\n"
+                    f"powercontext_memory_hits: {memory_hits}\n"
+                    f"powercontext_memory_mutations: {memory_mutations}\n"
                     f"user_utterance: {user_text}"
                 ),
             },

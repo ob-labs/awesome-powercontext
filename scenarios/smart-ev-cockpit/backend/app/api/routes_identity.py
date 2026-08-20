@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 
 from app.domain.identity_models import UpdateUserIdentityRequest
-from app.powermem.client import PowerMemConnectionError
+from app.powercontext.client import PowerContextConnectionError
 from app.services.identity_service import UnknownIdentityError
 
 router = APIRouter(prefix="/api/scenarios/smart-ev-cockpit")
@@ -43,10 +43,10 @@ def profile(actor_id: str, request: Request) -> dict:
     try:
         summary = container.identity_service.get_profile(
             actor_id,
-            powermem_client=container.powermem_client,
+            powercontext_client=container.powercontext_client,
         )
     except UnknownIdentityError as exc:
         raise HTTPException(status_code=404, detail="Identity not found") from exc
-    except PowerMemConnectionError as exc:
+    except PowerContextConnectionError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {"profile": summary.model_dump(mode="json")}

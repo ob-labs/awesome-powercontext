@@ -37,7 +37,7 @@ def handle(context: ActContext, event: VehicleEvent | dict) -> ActResult:
             ]
         },
     }
-    hits = MemoryService(context.container.powermem_client).search(
+    hits = MemoryService(context.container.powercontext_client).search(
         query=query,
         filters=filters,
         limit=10,

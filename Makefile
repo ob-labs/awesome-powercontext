@@ -1,8 +1,12 @@
 .PHONY: install-backend test-backend backend frontend test-frontend lint-backend
 
 PYTHON ?= python3
+POWERCONTEXT_SOURCE ?= $(abspath ../powercontext)
 
 install-backend:
+	@if [ -d "$(POWERCONTEXT_SOURCE)" ]; then \
+		$(PYTHON) -m pip install -e "$(POWERCONTEXT_SOURCE)[builtin]"; \
+	fi
 	cd scenarios/smart-ev-cockpit/backend && $(PYTHON) -m pip install -e ".[dev]"
 
 test-backend:

@@ -143,7 +143,7 @@ export interface InfotainmentDisplayLabels {
     zhangjiang: string;
     xujiahui: string;
   };
-  powerMemDrive: string;
+  powerContextDrive: string;
   sceneProjector: string;
   needsAttention: string;
   passenger: string;
@@ -180,7 +180,7 @@ export interface ProjectionLabels {
   checkService: string;
   noProjectionUpdate: string;
   noFakeFallback: string;
-  livePowerMemTrace: string;
+  livePowerContextTrace: string;
   assistant: string;
   llmChat: string;
   actionTrace: string;
@@ -611,7 +611,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       reset: "Demo state reset.",
       exportedTrace: "Exported trace evidence JSON.",
       traceExportFailed: "Trace export failed",
-      liveFallbackError: "PowerMem live mode failed",
+      liveFallbackError: "PowerContext live mode failed",
       testDataFallbackError: "Test data operation failed",
     },
     evidence: {
@@ -619,7 +619,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       openAria: "Open live evidence",
       dialogAria: "Live evidence console",
       title: "Live Evidence Console",
-      subtitle: "PowerMem trace, scenario timeline, vehicle state, and memory graph.",
+      subtitle: "PowerContext trace, scenario timeline, vehicle state, and memory graph.",
       close: "Close Evidence",
     },
     manual: {
@@ -635,7 +635,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       countAria: "Memory count",
       generateAria: (count) => `Generate and import ${count} memories`,
       generate: "Generate Data",
-      clearAria: "Clear all PowerMem memories",
+      clearAria: "Clear all PowerContext memories",
       clear: "Clear Data",
       noDataset: "No dataset generated",
       stateLabels: {
@@ -659,10 +659,10 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       utterance: "Utterance",
       send: "Send",
       sending: "Sending",
-      empty: "Submit an utterance to start a live PowerMem trace.",
+      empty: "Submit an utterance to start a live PowerContext trace.",
       floatingLabel: "Floating voice chat",
       recentLabel: "Recent conversation",
-      assistantName: "PowerMem",
+      assistantName: "PowerContext",
       userName: "Voice",
     },
     seats: {
@@ -676,11 +676,11 @@ export const APP_COPY: Record<Locale, AppCopy> = {
     },
     identity: {
       dialogLabel: "User profile settings",
-      title: "PowerMem identity binding",
-      subtitle: "Bind this seat occupant to a stable PowerMem user_id and review the current profile summary.",
+      title: "PowerContext identity binding",
+      subtitle: "Bind this seat occupant to a stable PowerContext user_id and review the current profile summary.",
       seat: "Seat",
       displayName: "Display name",
-      userId: "PowerMem user_id",
+      userId: "PowerContext user_id",
       profileNote: "Profile note",
       profileSummary: "User profile",
       memoryKinds: "Memory kinds",
@@ -707,9 +707,9 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       stageLabel: "Smart EV cockpit scene",
       imageAlt: "Premium smart EV cockpit interior",
       sceneFocus: "Scene focus",
-      projectionLabel: "Holographic PowerMem evidence projection",
+      projectionLabel: "Holographic PowerContext evidence projection",
       infotainment: {
-        displayLabel: "Panoramic PowerMem display",
+        displayLabel: "Panoramic PowerContext display",
         driverClusterLabel: "Driver instrument cluster",
         centerTouchscreenLabel: "Main cockpit touchscreen",
         passengerScreenLabel: "Passenger cockpit screen",
@@ -743,7 +743,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
         turnMusicOnLabel: "Turn music on",
         turnMusicOffLabel: "Turn music off",
         playbackProgressLabel: "Playback progress",
-        projectionSummaryLabel: "PowerMem projection summary",
+        projectionSummaryLabel: "PowerContext projection summary",
         navigationMapModeLabel: "Navigation map mode",
         navigationStatusLabel: "Status",
         navigationDestinationLabel: "Destination",
@@ -768,7 +768,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
           zhangjiang: "Zhangjiang",
           xujiahui: "Xujiahui",
         },
-        powerMemDrive: "PowerMem Drive",
+        powerContextDrive: "PowerContext Drive",
         sceneProjector: "Scene projector",
         needsAttention: "Needs attention",
         passenger: "Passenger",
@@ -783,7 +783,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
         defaultMediaPreference: {
           title: "Relaxed playlists",
           subtitle: "Driver music preference",
-          sourceLabel: "PowerMem media",
+          sourceLabel: "PowerContext media",
           volumeLabel: "Volume",
           volume: "22",
         },
@@ -840,7 +840,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       checkService: "Check service",
       noProjectionUpdate: "No projection update",
       noFakeFallback: "No fake fallback",
-      livePowerMemTrace: "Live PowerMem trace",
+      livePowerContextTrace: "Live PowerContext trace",
       assistant: "Voice assistant",
       llmChat: "LLM chat",
       actionTrace: "Action trace",
@@ -891,7 +891,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       batteryCareGuidanceReady: "Charging guidance ready",
       nearestAvailableChargingStation: "Nearest available charging station",
       reachableChargingStation: "Reachable charging station",
-      vehicleActionApplied: "PowerMem restores the remembered comfort setup on the vehicle.",
+      vehicleActionApplied: "PowerContext restores the remembered comfort setup on the vehicle.",
       comfortControlRequest:
         "The utterance is treated as a cabin comfort control request.",
       noMemoryDetail: "Memory content is not available for this hit.",
@@ -919,21 +919,21 @@ export const APP_COPY: Record<Locale, AppCopy> = {
         driver_primary: {
           title: "Relaxed playlists",
           subtitle: "Driver music preference",
-          sourceLabel: "PowerMem media",
+          sourceLabel: "PowerContext media",
           volumeLabel: "Volume",
           volume: "22",
         },
         passenger_front: {
           title: "Weekend relaxed playlists",
           subtitle: "Passenger media preference",
-          sourceLabel: "PowerMem media",
+          sourceLabel: "PowerContext media",
           volumeLabel: "Volume",
           volume: "22",
         },
         child_rear_left: {
           title: "Quiet bedtime stories",
           subtitle: "Child media preference",
-          sourceLabel: "PowerMem media",
+          sourceLabel: "PowerContext media",
           volumeLabel: "Volume",
           volume: "18",
         },
@@ -943,7 +943,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
     evidencePanels: {
       cockpitStatus: {
         ariaLabel: "Cockpit status",
-        live: "LIVE PowerMem",
+        live: "LIVE PowerContext",
         vehicle: "Demo Vehicle",
         soc: "SOC 62%",
         inside: "Inside 22°C",
@@ -953,7 +953,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
         ariaLabel: "Scenario timeline",
       },
       memoryFlow: {
-        title: "PowerMem Memory Flow",
+        title: "PowerContext Memory Flow",
         empty: "No live memory hits yet.",
       },
       privacy: {
@@ -967,7 +967,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       },
       recommendations: {
         title: "Recommendations",
-        empty: "Recommendations appear after live PowerMem evidence is returned.",
+        empty: "Recommendations appear after live PowerContext evidence is returned.",
       },
       memoryGraph: {
         title: "Memory Graph",
@@ -984,9 +984,9 @@ export const APP_COPY: Record<Locale, AppCopy> = {
         drawerLabel: "Developer evidence drawer",
         title: "Developer Evidence",
         exportTrace: "Export Trace",
-        backendStatusLabel: "PowerMem backend status",
-        live: "LIVE PowerMem",
-        disconnected: "PowerMem disconnected",
+        backendStatusLabel: "PowerContext backend status",
+        live: "LIVE PowerContext",
+        disconnected: "PowerContext disconnected",
         noEvidence: "No evidence returned",
         steps: [
           ["request", "Request"],
@@ -1017,7 +1017,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       reset: "演示状态已重置。",
       exportedTrace: "已导出追踪证据 JSON。",
       traceExportFailed: "追踪导出失败",
-      liveFallbackError: "PowerMem 实时模式失败",
+      liveFallbackError: "PowerContext 实时模式失败",
       testDataFallbackError: "测试数据操作失败",
     },
     evidence: {
@@ -1025,7 +1025,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       openAria: "打开实时证据",
       dialogAria: "实时证据控制台",
       title: "实时证据控制台",
-      subtitle: "PowerMem 追踪、场景时间线、车辆状态和记忆图谱。",
+      subtitle: "PowerContext 追踪、场景时间线、车辆状态和记忆图谱。",
       close: "关闭证据",
     },
     manual: {
@@ -1041,7 +1041,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       countAria: "记忆数量",
       generateAria: (count) => `生成并导入 ${count} 条记忆`,
       generate: "数据生成",
-      clearAria: "清空 PowerMem 数据库全部记忆",
+      clearAria: "清空 PowerContext 数据库全部记忆",
       clear: "数据清理",
       noDataset: "尚未生成数据集",
       stateLabels: {
@@ -1065,10 +1065,10 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       utterance: "语音指令",
       send: "发送",
       sending: "发送中",
-      empty: "提交一句语音指令，启动实时 PowerMem 追踪。",
+      empty: "提交一句语音指令，启动实时 PowerContext 追踪。",
       floatingLabel: "悬浮语音聊天",
       recentLabel: "最近对话",
-      assistantName: "PowerMem",
+      assistantName: "PowerContext",
       userName: "语音",
     },
     seats: {
@@ -1082,11 +1082,11 @@ export const APP_COPY: Record<Locale, AppCopy> = {
     },
     identity: {
       dialogLabel: "用户个人信息设置",
-      title: "PowerMem 身份绑定",
-      subtitle: "把当前人物绑定到稳定的 PowerMem user_id，并查看用户画像摘要。",
+      title: "PowerContext 身份绑定",
+      subtitle: "把当前人物绑定到稳定的 PowerContext user_id，并查看用户画像摘要。",
       seat: "座位",
       displayName: "显示名称",
-      userId: "PowerMem user_id",
+      userId: "PowerContext user_id",
       profileNote: "个人备注",
       profileSummary: "用户画像",
       memoryKinds: "记忆类型",
@@ -1113,9 +1113,9 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       stageLabel: "智能电动车座舱场景",
       imageAlt: "高端智能电动车座舱内饰",
       sceneFocus: "场景聚焦",
-      projectionLabel: "PowerMem 全息证据投影",
+      projectionLabel: "PowerContext 全息证据投影",
       infotainment: {
-        displayLabel: "PowerMem 全景车机屏幕",
+        displayLabel: "PowerContext 全景车机屏幕",
         driverClusterLabel: "驾驶员仪表屏",
         centerTouchscreenLabel: "中控触控屏",
         passengerScreenLabel: "副驾娱乐屏",
@@ -1149,7 +1149,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
         turnMusicOnLabel: "开启音乐",
         turnMusicOffLabel: "关闭音乐",
         playbackProgressLabel: "播放进度",
-        projectionSummaryLabel: "车机屏幕 PowerMem 摘要",
+        projectionSummaryLabel: "车机屏幕 PowerContext 摘要",
         navigationMapModeLabel: "导航地图模式",
         navigationStatusLabel: "状态",
         navigationDestinationLabel: "目的地",
@@ -1174,7 +1174,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
           zhangjiang: "张江",
           xujiahui: "徐家汇",
         },
-        powerMemDrive: "PowerMem 智驾",
+        powerContextDrive: "PowerContext 智驾",
         sceneProjector: "场景投影",
         needsAttention: "需要处理",
         passenger: "副驾",
@@ -1189,7 +1189,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
         defaultMediaPreference: {
           title: "舒缓歌单",
           subtitle: "驾驶员音乐偏好",
-          sourceLabel: "PowerMem 媒体",
+          sourceLabel: "PowerContext 媒体",
           volumeLabel: "音量",
           volume: "22",
         },
@@ -1246,7 +1246,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       checkService: "检查服务",
       noProjectionUpdate: "没有投影更新",
       noFakeFallback: "没有模拟兜底",
-      livePowerMemTrace: "实时 PowerMem 追踪",
+      livePowerContextTrace: "实时 PowerContext 追踪",
       assistant: "语音助手",
       llmChat: "模型对话",
       actionTrace: "动作轨迹",
@@ -1294,7 +1294,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       batteryCareGuidanceReady: "充电建议已准备",
       nearestAvailableChargingStation: "最近可用的充电站",
       reachableChargingStation: "可到达的充电站",
-      vehicleActionApplied: "PowerMem 已将记忆中的舒适方案恢复到车辆。",
+      vehicleActionApplied: "PowerContext 已将记忆中的舒适方案恢复到车辆。",
       comfortControlRequest: "这句话被识别为座舱舒适控制请求。",
       noMemoryDetail: "这条命中没有可展示的记忆内容。",
       zoneLabels: {
@@ -1321,21 +1321,21 @@ export const APP_COPY: Record<Locale, AppCopy> = {
         driver_primary: {
           title: "舒缓歌单",
           subtitle: "驾驶员音乐偏好",
-          sourceLabel: "PowerMem 媒体",
+          sourceLabel: "PowerContext 媒体",
           volumeLabel: "音量",
           volume: "22",
         },
         passenger_front: {
           title: "周末舒缓歌单",
           subtitle: "前排乘客媒体偏好",
-          sourceLabel: "PowerMem 媒体",
+          sourceLabel: "PowerContext 媒体",
           volumeLabel: "音量",
           volume: "22",
         },
         child_rear_left: {
           title: "安静睡前故事",
           subtitle: "儿童媒体偏好",
-          sourceLabel: "PowerMem 媒体",
+          sourceLabel: "PowerContext 媒体",
           volumeLabel: "音量",
           volume: "18",
         },
@@ -1345,7 +1345,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
     evidencePanels: {
       cockpitStatus: {
         ariaLabel: "座舱状态",
-        live: "实时 PowerMem",
+        live: "实时 PowerContext",
         vehicle: "演示车辆",
         soc: "电量 62%",
         inside: "舱内 22°C",
@@ -1355,7 +1355,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
         ariaLabel: "场景时间线",
       },
       memoryFlow: {
-        title: "PowerMem 记忆流",
+        title: "PowerContext 记忆流",
         empty: "还没有实时记忆命中。",
       },
       privacy: {
@@ -1369,7 +1369,7 @@ export const APP_COPY: Record<Locale, AppCopy> = {
       },
       recommendations: {
         title: "推荐",
-        empty: "实时 PowerMem 证据返回后会显示推荐。",
+        empty: "实时 PowerContext 证据返回后会显示推荐。",
       },
       memoryGraph: {
         title: "记忆图谱",
@@ -1386,9 +1386,9 @@ export const APP_COPY: Record<Locale, AppCopy> = {
         drawerLabel: "开发者证据抽屉",
         title: "开发者证据",
         exportTrace: "导出追踪",
-        backendStatusLabel: "PowerMem 后端状态",
-        live: "实时 PowerMem",
-        disconnected: "PowerMem 未连接",
+        backendStatusLabel: "PowerContext 后端状态",
+        live: "实时 PowerContext",
+        disconnected: "PowerContext 未连接",
         noEvidence: "没有返回证据",
         steps: [
           ["request", "请求"],

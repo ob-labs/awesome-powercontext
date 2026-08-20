@@ -15,4 +15,4 @@
 9. 主动关怀
 10. 生命周期与隐私
 
-Presenter 规则：只使用后端返回的 memory hits 和 trace evidence。真实 PowerMem 不可用时，展示 live-mode 错误，不继续演示。
+Presenter 规则：只使用后端返回的 memory hits 和 trace evidence。真实 PowerContext 不可用时，展示 live-mode 错误，不继续演示。

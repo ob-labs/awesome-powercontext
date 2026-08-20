@@ -6,7 +6,7 @@ interface DeveloperEvidenceDrawerProps {
   response: {
     trace_id: string;
     live_backend: string;
-    powermem_connected: boolean;
+    powercontext_connected: boolean;
     evidence: Record<string, unknown>;
   };
   onExportTrace?: () => void;
@@ -44,7 +44,7 @@ export function DeveloperEvidenceDrawer({
         </button>
       </header>
       <div className="evidence-status" aria-label={labels.backendStatusLabel}>
-        <span>{response.powermem_connected ? labels.live : labels.disconnected}</span>
+        <span>{response.powercontext_connected ? labels.live : labels.disconnected}</span>
         <span>{response.live_backend}</span>
       </div>
       <div className="evidence-steps">

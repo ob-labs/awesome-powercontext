@@ -3,12 +3,12 @@ from fastapi.testclient import TestClient
 
 from app.dependencies import AppContainer
 from app.main import create_app
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.services.memory_service import MemoryService
-from tests.fakes import CrudPowerMem, memory_record
+from tests.fakes import CrudPowerContext, memory_record
 
 
-class AddResultPowerMem:
+class AddResultPowerContext:
     def __init__(self, result):
         self.result = result
 
@@ -16,7 +16,7 @@ class AddResultPowerMem:
         return self.result
 
 
-class MetadataFilterLimitedCrudPowerMem(CrudPowerMem):
+class MetadataFilterLimitedCrudPowerContext(CrudPowerContext):
     def get_all(
         self,
         *,
@@ -42,8 +42,8 @@ class MetadataFilterLimitedCrudPowerMem(CrudPowerMem):
         }
 
 
-def test_delete_memory_endpoint_calls_powermem_delete():
-    fake = CrudPowerMem(
+def test_delete_memory_endpoint_calls_powercontext_delete():
+    fake = CrudPowerContext(
         [
             memory_record(
                 "mem_001",
@@ -53,7 +53,7 @@ def test_delete_memory_endpoint_calls_powermem_delete():
         delete_result=True,
     )
     app = create_app(
-        container=AppContainer(powermem_client=PowerMemClient(memory=fake))
+        container=AppContainer(powercontext_client=PowerContextClient(memory=fake))
     )
     client = TestClient(app)
 
@@ -67,8 +67,8 @@ def test_delete_memory_endpoint_calls_powermem_delete():
     assert fake.delete_calls == [{"memory_id": "mem_001"}]
 
 
-def test_delete_memory_endpoint_recovers_when_powermem_metadata_filters_return_empty():
-    fake = MetadataFilterLimitedCrudPowerMem(
+def test_delete_memory_endpoint_recovers_when_powercontext_metadata_filters_return_empty():
+    fake = MetadataFilterLimitedCrudPowerContext(
         [
             memory_record(
                 "mem_001",
@@ -78,7 +78,7 @@ def test_delete_memory_endpoint_recovers_when_powermem_metadata_filters_return_e
         delete_result=True,
     )
     app = create_app(
-        container=AppContainer(powermem_client=PowerMemClient(memory=fake))
+        container=AppContainer(powercontext_client=PowerContextClient(memory=fake))
     )
     client = TestClient(app)
 
@@ -99,7 +99,7 @@ def test_delete_memory_requires_actor_id():
     client = TestClient(
         create_app(
             container=AppContainer(
-                powermem_client=PowerMemClient(memory=CrudPowerMem())
+                powercontext_client=PowerContextClient(memory=CrudPowerContext())
             )
         )
     )
@@ -112,7 +112,7 @@ def test_delete_memory_requires_actor_id():
 
 
 def test_delete_memory_rejects_cross_actor_record_without_deleting():
-    fake = CrudPowerMem(
+    fake = CrudPowerContext(
         [
             memory_record(
                 "mem_001",
@@ -122,7 +122,7 @@ def test_delete_memory_rejects_cross_actor_record_without_deleting():
     )
     client = TestClient(
         create_app(
-            container=AppContainer(powermem_client=PowerMemClient(memory=fake))
+            container=AppContainer(powercontext_client=PowerContextClient(memory=fake))
         )
     )
 
@@ -136,10 +136,10 @@ def test_delete_memory_rejects_cross_actor_record_without_deleting():
     assert fake.get_all_calls[0]["user_id"] == "driver_primary"
 
 
-def test_delete_memory_returns_503_when_powermem_is_disconnected():
+def test_delete_memory_returns_503_when_powercontext_is_disconnected():
     client = TestClient(
         create_app(
-            container=AppContainer(powermem_client=PowerMemClient(memory=None))
+            container=AppContainer(powercontext_client=PowerContextClient(memory=None))
         ),
         raise_server_exceptions=False,
     )
@@ -150,12 +150,12 @@ def test_delete_memory_returns_503_when_powermem_is_disconnected():
     )
 
     assert response.status_code == 503
-    assert "PowerMem is not connected" in response.json()["detail"]
+    assert "PowerContext is not connected" in response.json()["detail"]
 
 
 def test_archive_preserves_content_when_updating_metadata():
-    fake = CrudPowerMem([memory_record("temp-1", content="short context")])
-    service = MemoryService(PowerMemClient(fake))
+    fake = CrudPowerContext([memory_record("temp-1", content="short context")])
+    service = MemoryService(PowerContextClient(fake))
 
     service.archive(memory_record("temp-1", content="short context"))
 
@@ -173,15 +173,15 @@ def test_archive_preserves_content_when_updating_metadata():
     ],
 )
 def test_delete_normalizes_dictionary_responses(delete_result, expected):
-    fake = CrudPowerMem(delete_result=delete_result)
+    fake = CrudPowerContext(delete_result=delete_result)
 
-    assert PowerMemClient(fake).delete_memory("mem_001") is expected
+    assert PowerContextClient(fake).delete_memory("mem_001") is expected
 
 
 def test_list_memories_passes_filters_user_and_limit():
-    fake = CrudPowerMem([memory_record("mem_001")])
+    fake = CrudPowerContext([memory_record("mem_001")])
 
-    rows = PowerMemClient(fake).list_memories(
+    rows = PowerContextClient(fake).list_memories(
         filters={"memory_kind": "temporary_context"},
         user_id="driver_primary",
         limit=7,
@@ -205,7 +205,7 @@ def test_list_memories_passes_filters_user_and_limit():
     ],
 )
 def test_add_rejects_rows_missing_required_fields(result):
-    client = PowerMemClient(AddResultPowerMem(result))
+    client = PowerContextClient(AddResultPowerContext(result))
 
     with pytest.raises(RuntimeError, match="invalid ADD response"):
         client.add_memory(
@@ -216,8 +216,8 @@ def test_add_rejects_rows_missing_required_fields(result):
 
 
 def test_add_preserves_complete_response_compatibility():
-    client = PowerMemClient(
-        AddResultPowerMem(
+    client = PowerContextClient(
+        AddResultPowerContext(
             {"results": [{"id": "mem_001", "memory": "stored content"}]}
         )
     )

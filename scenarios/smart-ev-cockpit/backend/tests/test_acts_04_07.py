@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from app.data.csv_snapshot_loader import SnapshotResult
 from app.domain.memory_models import MemoryMetadata
 from app.domain.scenario_models import ActRequest
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.privacy.projection import project_memory_for_frontend
 from app.services.acts.act_04_capability import handle as handle_act_04
 from app.services.acts.act_05_location import handle as handle_act_05
@@ -84,7 +84,7 @@ def raw_hit(
 def context_for(act_key, actor_id, seat_position, text, hits, loader=None):
     memory = StubMemory(hits)
     container = SimpleNamespace(
-        powermem_client=PowerMemClient(memory),
+        powercontext_client=PowerContextClient(memory),
         csv_snapshot_loader=loader or StubSnapshotLoader(),
     )
     return (
@@ -514,7 +514,7 @@ def test_act_06_uses_current_child_identity_when_driver_requests_child_media():
     ]
     memory = StubMemory(hits)
     container = SimpleNamespace(
-        powermem_client=PowerMemClient(memory),
+        powercontext_client=PowerContextClient(memory),
         csv_snapshot_loader=StubSnapshotLoader(),
         identity_service=StubIdentityService(),
     )
@@ -571,7 +571,7 @@ def test_act_06_finds_structured_child_media_when_generated_hits_crowd_top_resul
     ]
     memory = LimitingStubMemory([*noisy_hits, *valid_hits])
     container = SimpleNamespace(
-        powermem_client=PowerMemClient(memory),
+        powercontext_client=PowerContextClient(memory),
         csv_snapshot_loader=StubSnapshotLoader(),
     )
     context = ActContext(
@@ -787,7 +787,7 @@ def test_act_07_searches_past_legacy_relationship_rows_without_safe_metadata():
     )
     memory = LimitingStubMemory(hits)
     container = SimpleNamespace(
-        powermem_client=PowerMemClient(memory),
+        powercontext_client=PowerContextClient(memory),
         csv_snapshot_loader=StubSnapshotLoader(),
     )
     context = ActContext(
@@ -1238,7 +1238,7 @@ def test_all_handlers_are_order_independent():
         reversed_context = ActContext(
             request=context.request,
             container=SimpleNamespace(
-                powermem_client=PowerMemClient(reversed_memory),
+                powercontext_client=PowerContextClient(reversed_memory),
                 csv_snapshot_loader=context.container.csv_snapshot_loader,
             ),
         )

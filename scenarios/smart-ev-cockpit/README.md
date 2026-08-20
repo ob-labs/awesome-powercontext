@@ -1,6 +1,6 @@
 # Smart EV Cockpit Memory
 
-This scenario demonstrates a live PowerMem-backed smart EV cockpit assistant with privacy-safe synthetic data, memory lifecycle management, and inspectable evidence traces across **ten deterministic acts**.
+This scenario demonstrates a live PowerContext-backed smart EV cockpit assistant with privacy-safe synthetic data, memory lifecycle management, and inspectable evidence traces across **ten deterministic acts**.
 
 ## Demo flow
 

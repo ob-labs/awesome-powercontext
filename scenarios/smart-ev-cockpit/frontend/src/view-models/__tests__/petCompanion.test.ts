@@ -34,8 +34,8 @@ function response(overrides: Partial<ScenarioResponse> = {}): ScenarioResponse {
     act_key: "Act 1",
     assistant_reply: "完成",
     trace_id: "trace_pet",
-    live_backend: "powermem_sdk",
-    powermem_connected: true,
+    live_backend: "powercontext_builtin",
+    powercontext_connected: true,
     operations: [{ type: "SEARCH", memory_ids: ["mem-1"] }],
     memory_hits: [
       {
@@ -238,7 +238,7 @@ describe("buildPetCompanionState", () => {
       step: step("Act 1"),
       response: null,
       projection: { ...projection, status: "error" },
-      liveError: "PowerMem unavailable",
+      liveError: "PowerContext unavailable",
       selectedActorId: "driver_primary",
       locale: "en",
     });
@@ -247,6 +247,6 @@ describe("buildPetCompanionState", () => {
     expect(pet.mood).toBe("alert");
     expect(pet.target).toBe("error");
     expect(pet.anchor).toBe("error");
-    expect(pet.speech).toContain("PowerMem");
+    expect(pet.speech).toContain("PowerContext");
   });
 });

@@ -52,7 +52,7 @@ def test_chat_sends_real_memory_mutations_to_llm(monkeypatch):
     system_message = requests[0]["json"]["messages"][0]["content"]
     user_message = requests[0]["json"]["messages"][1]["content"]
     assert "Only claim a memory was saved when an ADD mutation is present" in system_message
-    assert "powermem_memory_mutations" in user_message
+    assert "powercontext_memory_mutations" in user_message
     assert "mem_coffee" in user_message
 
 

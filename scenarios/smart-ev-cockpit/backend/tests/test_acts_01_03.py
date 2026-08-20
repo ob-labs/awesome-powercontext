@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from app.domain.memory_models import MemoryMetadata
 from app.domain.scenario_models import ActRequest
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.services.acts.act_01_profile import handle as handle_act_01
 from app.services.acts.act_02_multi_actor import handle as handle_act_02
 from app.services.acts.act_03_routine import handle as handle_act_03
@@ -56,7 +56,7 @@ def context_for(*, act_key, actor_id, seat_position, text, memory=None):
         text=text,
         session_id="session_test",
     )
-    container = SimpleNamespace(powermem_client=PowerMemClient(raw_memory))
+    container = SimpleNamespace(powercontext_client=PowerContextClient(raw_memory))
     return ActContext(request=request, container=container), raw_memory
 
 
@@ -390,7 +390,7 @@ def test_act_02_replies_in_chinese_for_chinese_cabin_request():
     assert result.assistant_reply == "已将主驾区域温度调到 26C，座椅加热调到 2 档。"
 
 
-def test_act_02_recovers_when_powermem_does_not_support_metadata_filters():
+def test_act_02_recovers_when_powercontext_does_not_support_metadata_filters():
     memory = MetadataFilterLimitedMemory(
         hits=[
             raw_hit(

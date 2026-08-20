@@ -1,10 +1,10 @@
-from app.powermem.filtering import (
+from app.powercontext.filtering import (
     fallback_read_limit,
     needs_server_filter_fallback,
-    powermem_server_filters,
+    powercontext_server_filters,
     records_matching_filters,
 )
-from app.powermem.mappers import powermem_hit_to_record
+from app.powercontext.mappers import powercontext_hit_to_record
 from app.services.acts.base import ActContext
 from app.services.acts.localization import locale_for_context, localized
 from app.services.lifecycle_service import LifecycleExecutionError, LifecycleService
@@ -29,7 +29,7 @@ def handle(context: ActContext, current_day: int, trace_id: str) -> dict:
         user_id=context.request.user_id or context.request.actor_id,
         limit=100,
     )
-    service = LifecycleService(context.container.powermem_client)
+    service = LifecycleService(context.container.powercontext_client)
     context.container.trace_service.create_trace(trace_id, context.request.session_id)
     try:
         run = service.run(memories, current_day)
@@ -102,13 +102,13 @@ def _list_lifecycle_memories(
     user_id: str,
     limit: int,
 ):
-    rows = context.container.powermem_client.list_memories(
+    rows = context.container.powercontext_client.list_memories(
         filters=filters,
         user_id=user_id,
         limit=limit,
     )
     memories = records_matching_filters(
-        (powermem_hit_to_record(row) for row in rows),
+        (powercontext_hit_to_record(row) for row in rows),
         filters,
     )
     has_temporary_context = any(
@@ -117,13 +117,13 @@ def _list_lifecycle_memories(
     if not needs_server_filter_fallback(filters) or has_temporary_context:
         return memories[:limit]
 
-    fallback_rows = context.container.powermem_client.list_memories(
-        filters=powermem_server_filters(filters),
+    fallback_rows = context.container.powercontext_client.list_memories(
+        filters=powercontext_server_filters(filters),
         user_id=user_id,
         limit=fallback_read_limit(limit),
     )
     fallback_memories = records_matching_filters(
-        (powermem_hit_to_record(row) for row in fallback_rows),
+        (powercontext_hit_to_record(row) for row in fallback_rows),
         filters,
     )
     return _merge_unique(memories, fallback_memories)[:limit]
