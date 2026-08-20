@@ -3,12 +3,12 @@ from datetime import UTC, datetime
 import pytest
 
 from app.domain.scenario_models import ActRequest
-from app.powermem.client import PowerMemClient, PowerMemResponseError
-from app.powermem.mappers import powermem_hit_to_record
+from app.powercontext.client import PowerContextClient, PowerContextResponseError
+from app.powercontext.mappers import powercontext_hit_to_record
 from app.services.chat_memory_service import ChatMemoryService
 
 
-class InferencePowerMem:
+class InferencePowerContext:
     def __init__(self, result):
         self.result = result
         self.add_calls = []
@@ -26,8 +26,8 @@ class InferencePowerMem:
 
 
 def test_infer_memories_accepts_empty_results():
-    raw = InferencePowerMem({"results": []})
-    client = PowerMemClient(raw)
+    raw = InferencePowerContext({"results": []})
+    client = PowerContextClient(raw)
 
     mutations = client.infer_memories(
         messages=[{"role": "user", "content": "今天天气如何"}],
@@ -47,7 +47,7 @@ def test_infer_memories_accepts_empty_results():
 
 
 def test_infer_memories_preserves_mutation_events():
-    raw = InferencePowerMem(
+    raw = InferencePowerContext(
         {
             "results": [
                 {"id": "mem_add", "memory": "用户喜欢咖啡", "event": "ADD"},
@@ -66,7 +66,7 @@ def test_infer_memories_preserves_mutation_events():
         }
     )
 
-    mutations = PowerMemClient(raw).infer_memories(
+    mutations = PowerContextClient(raw).infer_memories(
         messages=[{"role": "user", "content": "我的偏好变了"}],
         user_id="driver_primary",
         metadata={"memory_kind": "person_profile"},
@@ -91,8 +91,8 @@ def test_infer_memories_preserves_mutation_events():
     ],
 )
 def test_infer_memories_rejects_malformed_results(result):
-    with pytest.raises(PowerMemResponseError, match="intelligent ingestion response"):
-        PowerMemClient(InferencePowerMem(result)).infer_memories(
+    with pytest.raises(PowerContextResponseError, match="Source ingestion response"):
+        PowerContextClient(InferencePowerContext(result)).infer_memories(
             messages=[{"role": "user", "content": "remember this"}],
             user_id="driver_primary",
             metadata={"memory_kind": "person_profile"},
@@ -100,22 +100,22 @@ def test_infer_memories_rejects_malformed_results(result):
 
 
 def test_infer_memories_wraps_sdk_failures():
-    class FailingInferencePowerMem:
+    class FailingInferencePowerContext:
         def add(self, messages, user_id=None, metadata=None, infer=False):
             raise RuntimeError("OceanBase write failed")
 
-    with pytest.raises(RuntimeError, match="PowerMem intelligent ingestion failed") as exc:
-        PowerMemClient(FailingInferencePowerMem()).infer_memories(
+    with pytest.raises(RuntimeError, match="PowerContext Source ingestion failed") as exc:
+        PowerContextClient(FailingInferencePowerContext()).infer_memories(
             messages=[{"role": "user", "content": "我喜欢喝咖啡"}],
             user_id="driver_primary",
             metadata={"memory_kind": "person_profile"},
         )
 
-    assert type(exc.value).__name__ == "PowerMemIngestionError"
+    assert type(exc.value).__name__ == "PowerContextIngestionError"
 
 
-def test_mapper_hydrates_created_at_from_powermem_result():
-    record = powermem_hit_to_record(
+def test_mapper_hydrates_created_at_from_powercontext_result():
+    record = powercontext_hit_to_record(
         {
             "id": "mem_profile",
             "memory": "用户喜欢咖啡",
@@ -135,7 +135,7 @@ def test_mapper_hydrates_created_at_from_powermem_result():
 
 
 def test_chat_memory_service_uses_stable_scoped_metadata():
-    raw = InferencePowerMem(
+    raw = InferencePowerContext(
         {"results": [{"id": "mem_coffee", "memory": "用户喜欢咖啡", "event": "ADD"}]}
     )
     request = ActRequest(
@@ -147,7 +147,7 @@ def test_chat_memory_service_uses_stable_scoped_metadata():
         session_id="demo_session_001",
     )
 
-    result = ChatMemoryService(PowerMemClient(raw)).ingest(
+    result = ChatMemoryService(PowerContextClient(raw)).ingest(
         request=request,
         trace_id="trace_coffee",
     )
@@ -195,7 +195,7 @@ def test_chat_memory_service_uses_stable_scoped_metadata():
     ],
 )
 def test_chat_memory_service_does_not_ingest_unambiguous_questions(text):
-    raw = InferencePowerMem(
+    raw = InferencePowerContext(
         {"results": [{"id": "wrong", "memory": "喜欢喝咖啡", "event": "ADD"}]}
     )
     request = ActRequest(
@@ -207,7 +207,7 @@ def test_chat_memory_service_does_not_ingest_unambiguous_questions(text):
         session_id="demo_session_001",
     )
 
-    result = ChatMemoryService(PowerMemClient(raw)).ingest(
+    result = ChatMemoryService(PowerContextClient(raw)).ingest(
         request=request,
         trace_id="trace_question",
     )
@@ -225,7 +225,7 @@ def test_chat_memory_service_does_not_ingest_unambiguous_questions(text):
     ],
 )
 def test_chat_memory_service_allows_explicit_remember_request(text):
-    raw = InferencePowerMem(
+    raw = InferencePowerContext(
         {
             "results": [
                 {"id": "mem_coffee", "memory": "喜欢无糖咖啡", "event": "ADD"}
@@ -241,7 +241,7 @@ def test_chat_memory_service_allows_explicit_remember_request(text):
         session_id="demo_session_001",
     )
 
-    result = ChatMemoryService(PowerMemClient(raw)).ingest(
+    result = ChatMemoryService(PowerContextClient(raw)).ingest(
         request=request,
         trace_id="trace_remember",
     )

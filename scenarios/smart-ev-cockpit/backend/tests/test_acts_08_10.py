@@ -5,10 +5,10 @@ from app.dependencies import AppContainer
 from app.domain.memory_models import MemoryMetadata, MemoryRecord
 from app.domain.scenario_models import ActRequest
 from app.main import create_app
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.services.acts import act_08_driving, act_09_proactive
 from app.services.acts.base import ActContext
-from tests.fakes import CrudPowerMem
+from tests.fakes import CrudPowerContext
 
 
 def _record(memory_id: str, kind: str, **metadata_updates) -> MemoryRecord:
@@ -21,7 +21,7 @@ def _record(memory_id: str, kind: str, **metadata_updates) -> MemoryRecord:
     return MemoryRecord(memory_id=memory_id, content=f"content for {memory_id}", metadata=metadata)
 
 
-class SearchPowerMem(CrudPowerMem):
+class SearchPowerContext(CrudPowerContext):
     def __init__(self, records=None):
         super().__init__(records)
         self.search_calls = []
@@ -43,7 +43,7 @@ class SearchPowerMem(CrudPowerMem):
         }
 
 
-class LimitingSearchPowerMem(SearchPowerMem):
+class LimitingSearchPowerContext(SearchPowerContext):
     def search(self, query, user_id=None, filters=None, limit=5):
         self.search_calls.append(
             {"query": query, "user_id": user_id, "filters": filters, "limit": limit}
@@ -70,8 +70,8 @@ class StubLoader:
 
 
 def _context(records, *, soc=62, outside_temp_c=6, source="test_telemetry"):
-    fake = SearchPowerMem(records)
-    container = AppContainer(powermem_client=PowerMemClient(fake))
+    fake = SearchPowerContext(records)
+    container = AppContainer(powercontext_client=PowerContextClient(fake))
     container.csv_snapshot_loader = StubLoader(
         {"soc": soc, "range_km": 305, "outside_temp_c": outside_temp_c}, source
     )
@@ -133,7 +133,7 @@ def test_act_8_does_not_invent_mode_without_driving_preference():
 
 
 def test_act_8_searches_past_legacy_rows_without_drive_mode():
-    fake = LimitingSearchPowerMem(
+    fake = LimitingSearchPowerContext(
         [
             _record(
                 f"legacy-drive-{index}",
@@ -144,7 +144,7 @@ def test_act_8_searches_past_legacy_rows_without_drive_mode():
         ]
         + [_record("drive-used", "driving_preference", drive_mode="comfort", confidence=0.8)]
     )
-    container = AppContainer(powermem_client=PowerMemClient(fake))
+    container = AppContainer(powercontext_client=PowerContextClient(fake))
     container.csv_snapshot_loader = StubLoader(
         {"soc": 62, "range_km": 305, "outside_temp_c": 6}, "test_telemetry"
     )
@@ -196,8 +196,8 @@ def test_act_8_missing_soc_returns_no_action_with_actual_source():
 
 
 def _act_9(records, soc):
-    fake = SearchPowerMem(records)
-    container = AppContainer(powermem_client=PowerMemClient(fake))
+    fake = SearchPowerContext(records)
+    container = AppContainer(powercontext_client=PowerContextClient(fake))
     request = ActRequest(
         act_key="Act 9",
         actor_id="driver_primary",
@@ -283,8 +283,8 @@ def test_act_9_handler_decides_without_mutating_vehicle_state():
 
 
 def test_vehicle_event_endpoint_returns_complete_act_9_and_mutates_state():
-    fake = SearchPowerMem([_record("drive-1", "driving_preference", drive_mode="eco")])
-    app = create_app(container=AppContainer(powermem_client=PowerMemClient(fake)))
+    fake = SearchPowerContext([_record("drive-1", "driving_preference", drive_mode="eco")])
+    app = create_app(container=AppContainer(powercontext_client=PowerContextClient(fake)))
     client = TestClient(app)
 
     response = client.post(
@@ -302,8 +302,8 @@ def test_vehicle_event_endpoint_returns_complete_act_9_and_mutates_state():
 
 
 def test_vehicle_event_endpoint_localizes_chinese_act_9_text():
-    fake = SearchPowerMem([_record("drive-1", "driving_preference", drive_mode="eco")])
-    app = create_app(container=AppContainer(powermem_client=PowerMemClient(fake)))
+    fake = SearchPowerContext([_record("drive-1", "driving_preference", drive_mode="eco")])
+    app = create_app(container=AppContainer(powercontext_client=PowerContextClient(fake)))
     client = TestClient(app)
 
     response = client.post(
@@ -324,7 +324,7 @@ def test_vehicle_event_endpoint_localizes_chinese_act_9_text():
 
 
 def test_vehicle_event_confirmation_executes_charging_navigation_without_act_5():
-    fake = SearchPowerMem(
+    fake = SearchPowerContext(
         [
             _record(
                 "charging-1",
@@ -334,7 +334,7 @@ def test_vehicle_event_confirmation_executes_charging_navigation_without_act_5()
             _record("location-1", "location_episode", region="张江科学城"),
         ]
     )
-    app = create_app(container=AppContainer(powermem_client=PowerMemClient(fake)))
+    app = create_app(container=AppContainer(powercontext_client=PowerContextClient(fake)))
     client = TestClient(app)
 
     response = client.post(
@@ -366,12 +366,12 @@ def test_vehicle_event_confirmation_executes_charging_navigation_without_act_5()
     assert "张江科学城" not in response.text
 
 
-class FailedSearchPowerMem(SearchPowerMem):
+class FailedSearchPowerContext(SearchPowerContext):
     def search(self, query, user_id=None, filters=None, limit=5):
         raise RuntimeError("search failed")
 
 
-class UnsupportedInFilterPowerMem(SearchPowerMem):
+class UnsupportedInFilterPowerContext(SearchPowerContext):
     def get_all(
         self,
         *,
@@ -389,7 +389,7 @@ class UnsupportedInFilterPowerMem(SearchPowerMem):
 
 def test_vehicle_event_search_failure_does_not_mutate_state():
     container = AppContainer(
-        powermem_client=PowerMemClient(FailedSearchPowerMem())
+        powercontext_client=PowerContextClient(FailedSearchPowerContext())
     )
     client = TestClient(
         create_app(container=container),
@@ -408,7 +408,7 @@ def test_vehicle_event_search_failure_does_not_mutate_state():
 
 def test_vehicle_event_endpoint_rejects_unknown_fields():
     app = create_app(
-        container=AppContainer(powermem_client=PowerMemClient(SearchPowerMem()))
+        container=AppContainer(powercontext_client=PowerContextClient(SearchPowerContext()))
     )
 
     response = TestClient(app).post(
@@ -420,8 +420,8 @@ def test_vehicle_event_endpoint_rejects_unknown_fields():
 
 
 def test_lifecycle_endpoint_validates_and_mutates_scenario_day():
-    fake = SearchPowerMem([])
-    app = create_app(container=AppContainer(powermem_client=PowerMemClient(fake)))
+    fake = SearchPowerContext([])
+    app = create_app(container=AppContainer(powercontext_client=PowerContextClient(fake)))
     client = TestClient(app)
 
     response = client.post(
@@ -438,8 +438,8 @@ def test_lifecycle_endpoint_validates_and_mutates_scenario_day():
     ).status_code == 422
 
 
-def test_lifecycle_endpoint_falls_back_when_powermem_get_all_ignores_in_filter():
-    fake = UnsupportedInFilterPowerMem(
+def test_lifecycle_endpoint_falls_back_when_powercontext_get_all_ignores_in_filter():
+    fake = UnsupportedInFilterPowerContext(
         [
             _record(
                 "expired-temp",
@@ -450,7 +450,7 @@ def test_lifecycle_endpoint_falls_back_when_powermem_get_all_ignores_in_filter()
         ]
     )
     client = TestClient(
-        create_app(container=AppContainer(powermem_client=PowerMemClient(fake)))
+        create_app(container=AppContainer(powercontext_client=PowerContextClient(fake)))
     )
 
     response = client.post(
@@ -472,8 +472,8 @@ def test_lifecycle_endpoint_falls_back_when_powermem_get_all_ignores_in_filter()
 
 
 def test_lifecycle_endpoint_localizes_chinese_act_10_text():
-    fake = SearchPowerMem([])
-    app = create_app(container=AppContainer(powermem_client=PowerMemClient(fake)))
+    fake = SearchPowerContext([])
+    app = create_app(container=AppContainer(powercontext_client=PowerContextClient(fake)))
     client = TestClient(app)
 
     response = client.post(
@@ -488,9 +488,9 @@ def test_lifecycle_endpoint_localizes_chinese_act_10_text():
 
 
 def test_lifecycle_trace_id_is_unique_for_each_run():
-    fake = SearchPowerMem([])
+    fake = SearchPowerContext([])
     client = TestClient(
-        create_app(container=AppContainer(powermem_client=PowerMemClient(fake)))
+        create_app(container=AppContainer(powercontext_client=PowerContextClient(fake)))
     )
 
     first = client.post(
@@ -508,7 +508,7 @@ def test_lifecycle_trace_id_is_unique_for_each_run():
     assert second["trace_id"] == second["lifecycle"]["trace_id"]
 
 
-class FailedUpdatePowerMem(SearchPowerMem):
+class FailedUpdatePowerContext(SearchPowerContext):
     def update(self, *, memory_id: str, content: str, metadata: dict):
         self.update_calls.append(
             {"memory_id": memory_id, "content": content, "metadata": metadata}
@@ -517,7 +517,7 @@ class FailedUpdatePowerMem(SearchPowerMem):
 
 
 def test_lifecycle_failure_response_includes_trace_and_partial_progress():
-    fake = FailedUpdatePowerMem(
+    fake = FailedUpdatePowerContext(
         [
             _record(
                 "temp-1",
@@ -529,7 +529,7 @@ def test_lifecycle_failure_response_includes_trace_and_partial_progress():
         ]
     )
     client = TestClient(
-        create_app(container=AppContainer(powermem_client=PowerMemClient(fake)))
+        create_app(container=AppContainer(powercontext_client=PowerContextClient(fake)))
     )
 
     response = client.post(

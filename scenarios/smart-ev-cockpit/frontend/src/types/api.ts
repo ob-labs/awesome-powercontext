@@ -117,7 +117,7 @@ export interface ScenarioResponse {
   assistant_reply: string;
   trace_id: string;
   live_backend: string;
-  powermem_connected: boolean;
+  powercontext_connected: boolean;
   data_source?: string;
   operations: TraceOperation[];
   memory_hits: ScenarioMemoryHit[];

@@ -1,7 +1,7 @@
 import pytest
 
-from app.powermem.client import PowerMemClient, PowerMemConnectionError
-from app.powermem.queries import build_cold_cabin_query
+from app.powercontext.client import PowerContextClient, PowerContextConnectionError
+from app.powercontext.queries import build_cold_cabin_query
 from app.services.memory_service import MemoryService
 
 
@@ -20,9 +20,9 @@ def test_build_cold_cabin_query_uses_actor_filters():
     }
 
 
-def test_memory_service_raises_when_powermem_unavailable():
-    client = PowerMemClient(memory=None)
+def test_memory_service_raises_when_powercontext_unavailable():
+    client = PowerContextClient(memory=None)
     service = MemoryService(client=client)
 
-    with pytest.raises(PowerMemConnectionError, match="PowerMem is not connected"):
+    with pytest.raises(PowerContextConnectionError, match="PowerContext is not connected"):
         service.search(query="anything", filters={}, limit=1)

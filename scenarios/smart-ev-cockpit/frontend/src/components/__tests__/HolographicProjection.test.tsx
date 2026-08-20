@@ -56,7 +56,7 @@ describe("HolographicProjection", () => {
         {
           label: "Action",
           value: "Driver zone 22°C -> 26°C, seat heat 0 -> 2",
-          detail: "PowerMem restores the remembered comfort setup on the vehicle.",
+          detail: "PowerContext restores the remembered comfort setup on the vehicle.",
         },
       ],
     };

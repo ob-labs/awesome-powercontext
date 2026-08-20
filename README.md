@@ -1,10 +1,10 @@
-# awesome-powermem
+# awesome-powercontext
 
 **English** | [简体中文](README_CN.md)
 
-Scenario-driven examples for [PowerMem](https://github.com/oceanbase/powermem) — a persistent memory layer for LLM applications.
+Scenario-driven examples for [PowerContext](https://github.com/oceanbase/powercontext) — a context runtime with persistent, revisioned Memory for agent applications.
 
-Instead of API snippets, this repository shows PowerMem working inside realistic product workflows: every demo runs against a **live PowerMem instance**, with real `ADD / SEARCH / UPDATE / DELETE` operations, inspectable trace evidence, and privacy-safe synthetic data. The frontend never fabricates memory hits — if PowerMem is unavailable, the UI shows a live-mode error instead of pretending.
+Instead of API snippets, this repository shows PowerContext working inside realistic product workflows. Every demo captures real Sources, creates cited Memory revisions, performs live search/revision/retirement operations, and exposes inspectable trace evidence over privacy-safe synthetic data. The frontend never fabricates memory hits.
 
 ## Scenarios
 
@@ -26,13 +26,13 @@ The demo runs through **ten acts** (memory creation → per-occupant disambiguat
 ### Architecture
 
 ```
-Browser (Vite + React)  ──/api proxy──►  FastAPI backend  ──local SDK──►  PowerMem
-     renders only                        builds queries,                 storage: OceanBase (default)
-  backend-returned                       projects/redacts                      or SQLite (opt-in)
-  memories & traces                      memories, audits
+Browser (Vite + React)  ──/api proxy──►  FastAPI backend  ──Builtin Runtime──► PowerContext
+     renders only                        capture Source,                    SQLite (default)
+  backend-returned                       recall/revise/retire                 or OceanBase
+  memories & traces                      project/redact
 ```
 
-The backend is the only layer that talks to PowerMem. The frontend receives already-projected data. See [architecture](docs/en/architecture.md) for details.
+The backend is the only layer that talks to PowerContext. The frontend receives already-projected data. See [architecture](docs/en/architecture.md) for details.
 
 ## Quick Start
 
@@ -40,22 +40,22 @@ The backend is the only layer that talks to PowerMem. The frontend receives alre
 
 - Python **3.11+**
 - Node.js **18+**
-- A reachable remote OceanBase instance
-- An OpenAI-compatible LLM + embedding endpoint (e.g. DashScope, OpenAI) and API key
+- [`uv`](https://docs.astral.sh/uv/) or `pip`
+- Optional: an OpenAI-compatible LLM endpoint for generated assistant replies
 
 ### 1. Configure
 
 ```bash
 cp .env.example .env
-# edit .env: set the OceanBase connection, model API keys, and provider base URLs
+# the default SQLite + FTS configuration works without model credentials
 ```
 
-The copied template uses a remote [OceanBase](https://github.com/oceanbase/oceanbase) instance as PowerMem's vector store. Set the `OCEANBASE_*` connection values before starting the backend. To use a local SQLite file instead, see [Configuration](#configuration).
+The copied template stores PowerContext data in a local SQLite database. Set `POWERCONTEXT_DATABASE_URL` to an official `mysql+aoceanbase` URL when you want to use [OceanBase](https://github.com/oceanbase/oceanbase).
 
 ### 2. Run the backend
 
 ```bash
-make install-backend
+make install-backend # uses ../powercontext when that source checkout exists
 make backend        # FastAPI on http://127.0.0.1:8000, docs at /docs
 ```
 
@@ -71,7 +71,7 @@ Open `http://localhost:5173`. When developing on a remote machine, forward ports
 
 ### 4. Seed demo data
 
-Acts 5–9 retrieve historical memories, so seed the memory store first: in the top data bar of the UI, click **Generate** (1,200 reproducible synthetic memory events, seed 42) and then **Import**. Importing runs live LLM extraction and embedding, so allow a few minutes.
+Acts 5–9 retrieve historical memories, so seed the memory store first: in the top data bar of the UI, click **Generate** (1,200 reproducible synthetic memory events, seed 42) and then **Import**. Each imported item is captured as a PowerContext Source and materialized as a cited Memory entry.
 
 Then use **Next → Send** to step through the ten acts, and open the **Evidence** panel to inspect memory hits, vehicle-state diffs, privacy masking, and the audit log.
 
@@ -81,27 +81,13 @@ All configuration lives in `.env` (see [.env.example](.env.example)):
 
 | Variable | Description | Default |
 |---|---|---|
-| `POWERMEM_BACKEND` | PowerMem integration mode | `local_sdk` |
-| `DATABASE_PROVIDER` | PowerMem vector store provider | `oceanbase` |
-| `OCEANBASE_HOST` / `OCEANBASE_PORT` | Remote OceanBase address | `REPLACE_ME` / `2881` |
-| `OCEANBASE_USER` / `OCEANBASE_PASSWORD` | Remote OceanBase credentials | `root@test` / `REPLACE_ME` |
-| `OCEANBASE_DATABASE` / `OCEANBASE_COLLECTION` | Database and memory collection | `smart_ev_cockpit` / `memories` |
-| `OCEANBASE_EMBEDDING_MODEL_DIMS` | OceanBase vector dimensions; must match `EMBEDDING_DIMS` | `1024` |
-| `LLM_PROVIDER` / `LLM_MODEL` | Chat model for memory extraction | `openai` / `qwen-plus` |
+| `POWERCONTEXT_BACKEND` | PowerContext integration mode | `builtin` |
+| `POWERCONTEXT_SCOPE_ID` | Isolated Source and Memory scope | `smart-ev-cockpit` |
+| `POWERCONTEXT_DATABASE_URL` | SQLite or OceanBase async SQLAlchemy URL | `sqlite+aiosqlite:///data/powercontext_smart_ev.db` |
+| `POWERCONTEXT_OPERATION_TIMEOUT_SECONDS` | Runtime call timeout | `30` |
+| `LLM_PROVIDER` / `LLM_MODEL` | Optional chat reply model | `openai` / — |
 | `LLM_API_KEY`, `OPENAI_LLM_BASE_URL` | Credentials and endpoint of your OpenAI-compatible provider | — |
-| `EMBEDDING_MODEL`, `EMBEDDING_DIMS` | Embedding model and dimensions | `text-embedding-v4` / `1024` |
 | `DEMO_PRIVACY_MODE` | Privacy projection strictness | `strict` |
-
-<details>
-<summary>Using SQLite instead</summary>
-
-```bash
-DATABASE_PROVIDER=sqlite
-SQLITE_PATH=./data/powermem_smart_ev.db
-SQLITE_COLLECTION=memories
-```
-
-</details>
 
 ## Testing
 
@@ -114,11 +100,11 @@ make test-frontend    # vitest
 ## Repository Layout
 
 ```
-awesome-powermem/
+awesome-powercontext/
 ├── docs/                       # Project docs (en + zh): overview, architecture, privacy, playbooks
 ├── scenarios/
 │   └── smart-ev-cockpit/
-│       ├── backend/            # FastAPI app wrapping the PowerMem SDK
+│       ├── backend/            # FastAPI app wrapping the PowerContext Builtin Runtime
 │       ├── frontend/           # Vite + React cockpit UI
 │       ├── data/synthetic/     # Synthetic scenario events (no real PII)
 │       └── docs/               # Scenario presenter playbooks
@@ -138,8 +124,8 @@ All scenario data is synthetic. No real automotive brands, user identities, vehi
 
 ## Contributing
 
-Contributions of new PowerMem scenarios are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Code, comments, paths, API fields, and commit messages use English; public data must stay synthetic.
+Contributions of new PowerContext scenarios are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Code, comments, paths, API fields, and commit messages use English; public data must stay synthetic.
 
 ## License
 
-Apache License 2.0 — the same license as [PowerMem](https://github.com/oceanbase/powermem).
+Apache License 2.0 — the same license as [PowerContext](https://github.com/oceanbase/powercontext).

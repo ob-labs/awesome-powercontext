@@ -16,7 +16,7 @@ def memory_record(
     return MemoryRecord(memory_id=memory_id, content=content, metadata=metadata)
 
 
-class CrudPowerMem:
+class CrudPowerContext:
     def __init__(
         self,
         records: list[MemoryRecord] | None = None,

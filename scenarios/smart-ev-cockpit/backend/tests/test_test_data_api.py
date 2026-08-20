@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.dependencies import AppContainer
 from app.main import create_app
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.services.identity_service import IdentityService
 from app.services.test_data_service import TestDataService
 
@@ -61,7 +61,7 @@ class BlockingMemory(RecordingMemory):
 
 def build_client(tmp_path: Path, memory=None) -> TestClient:
     container = AppContainer(
-        powermem_client=PowerMemClient(memory=memory),
+        powercontext_client=PowerContextClient(memory=memory),
         test_data_service=TestDataService(data_root=tmp_path),
         identity_service=IdentityService(tmp_path / "identities.sqlite3"),
     )
@@ -255,7 +255,7 @@ def test_import_test_data_endpoint_skips_duplicate_dataset(tmp_path: Path):
     ]
 
 
-def test_delete_test_dataset_endpoint_deletes_from_powermem(tmp_path: Path):
+def test_delete_test_dataset_endpoint_deletes_from_powercontext(tmp_path: Path):
     memory = RecordingMemory()
     client = build_client(tmp_path, memory=memory)
     generated = client.post(
@@ -274,7 +274,7 @@ def test_delete_test_dataset_endpoint_deletes_from_powermem(tmp_path: Path):
     assert memory.delete_calls == ["mem_001"]
 
 
-def test_clear_all_test_data_endpoint_deletes_entire_powermem_collection(
+def test_clear_all_test_data_endpoint_deletes_entire_powercontext_collection(
     tmp_path: Path,
 ):
     memory = RecordingMemory(
@@ -299,7 +299,7 @@ def test_clear_all_test_data_endpoint_deletes_entire_powermem_collection(
     ]
 
 
-def test_import_requires_connected_powermem(tmp_path: Path):
+def test_import_requires_connected_powercontext(tmp_path: Path):
     client = build_client(tmp_path, memory=None)
     generated = client.post(
         "/api/scenarios/smart-ev-cockpit/test-data/generate",
@@ -312,4 +312,4 @@ def test_import_requires_connected_powermem(tmp_path: Path):
     )
 
     assert response.status_code == 503
-    assert "PowerMem is not connected" in response.json()["detail"]
+    assert "PowerContext is not connected" in response.json()["detail"]

@@ -30,7 +30,7 @@ def handle(context: ActContext) -> ActResult:
         "seat_position": request.seat_position,
         "memory_kind": "location_episode",
     }
-    hits = MemoryService(context.container.powermem_client).search(
+    hits = MemoryService(context.container.powercontext_client).search(
         query=query,
         filters=filters,
         limit=10,

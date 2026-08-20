@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from app.dependencies import AppContainer
 from app.domain.memory_models import MemoryMetadata, MemoryRecord
 from app.main import create_app
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.services.chat_history_service import ChatHistoryService
 from app.services.identity_service import IdentityService
 
@@ -54,7 +54,7 @@ class IdentityApiMemory:
 def _client(tmp_path: Path):
     memory = IdentityApiMemory()
     container = AppContainer(
-        powermem_client=PowerMemClient(memory),
+        powercontext_client=PowerContextClient(memory),
         chat_history_service=ChatHistoryService(tmp_path / "chat.sqlite3"),
         identity_service=IdentityService(tmp_path / "identities.sqlite3"),
     )
@@ -96,7 +96,7 @@ def test_identity_api_updates_actor_user_binding(tmp_path):
     assert body["identity"]["profile_note"] == "Temporary demo driver"
 
 
-def test_identity_api_returns_powermem_profile_for_bound_user(tmp_path):
+def test_identity_api_returns_powercontext_profile_for_bound_user(tmp_path):
     client, memory = _client(tmp_path)
     client.put(
         "/api/scenarios/smart-ev-cockpit/identities/driver_primary",
@@ -115,7 +115,7 @@ def test_identity_api_returns_powermem_profile_for_bound_user(tmp_path):
     assert body["profile"]["memory_kind_counts"] == {"person_profile": 1}
 
 
-def test_utter_request_uses_bound_user_id_for_powermem_and_chat_history(tmp_path):
+def test_utter_request_uses_bound_user_id_for_powercontext_and_chat_history(tmp_path):
     client, memory = _client(tmp_path)
 
     response = client.post(
@@ -147,7 +147,7 @@ def test_utter_request_uses_bound_user_id_for_powermem_and_chat_history(tmp_path
     }
 
 
-def test_utter_search_uses_bound_user_id_for_powermem_lookup(tmp_path):
+def test_utter_search_uses_bound_user_id_for_powercontext_lookup(tmp_path):
     client, memory = _client(tmp_path)
 
     response = client.post(

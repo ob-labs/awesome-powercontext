@@ -4,10 +4,10 @@ import { describeChatSource } from "../chatSource";
 
 describe("describeChatSource", () => {
   it.each([
-    [[{ type: "CHAT" }, { type: "ADD" }, { type: "SEARCH" }], "PowerMem ADD + LLM"],
-    [[{ type: "CHAT" }, { type: "UPDATE" }], "PowerMem UPDATE + LLM"],
-    [[{ type: "CHAT" }, { type: "DELETE" }], "PowerMem DELETE + LLM"],
-    [[{ type: "CHAT" }, { type: "SEARCH" }], "PowerMem SEARCH + LLM"],
+    [[{ type: "CHAT" }, { type: "ADD" }, { type: "SEARCH" }], "PowerContext ADD + LLM"],
+    [[{ type: "CHAT" }, { type: "UPDATE" }], "PowerContext UPDATE + LLM"],
+    [[{ type: "CHAT" }, { type: "DELETE" }], "PowerContext DELETE + LLM"],
+    [[{ type: "CHAT" }, { type: "SEARCH" }], "PowerContext SEARCH + LLM"],
     [[{ type: "CHAT" }], "LLM"],
     [[], "LLM"],
   ])("maps %o to %s", (operations, expected) => {
@@ -16,7 +16,7 @@ describe("describeChatSource", () => {
 
   it("prioritizes a mutation over search evidence", () => {
     expect(describeChatSource([{ type: "SEARCH" }, { type: "UPDATE" }])).toBe(
-      "PowerMem UPDATE + LLM",
+      "PowerContext UPDATE + LLM",
     );
   });
 });

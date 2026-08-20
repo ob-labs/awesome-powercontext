@@ -3,19 +3,19 @@ from typing import Any
 from app.domain.memory_models import InferredMemoryMutation, MemoryMetadata, MemoryRecord
 
 
-class PowerMemConnectionError(RuntimeError):
+class PowerContextConnectionError(RuntimeError):
     pass
 
 
-class PowerMemResponseError(RuntimeError):
+class PowerContextResponseError(RuntimeError):
     pass
 
 
-class PowerMemIngestionError(RuntimeError):
+class PowerContextIngestionError(RuntimeError):
     pass
 
 
-class PowerMemClient:
+class PowerContextClient:
     def __init__(self, memory: Any | None):
         self._memory = memory
 
@@ -25,13 +25,20 @@ class PowerMemClient:
 
     def _require_memory(self) -> Any:
         if self._memory is None:
-            raise PowerMemConnectionError(
-                "PowerMem is not connected. Demo cannot continue in live mode."
+            raise PowerContextConnectionError(
+                "PowerContext is not connected. Demo cannot continue in live mode."
             )
         return self._memory
 
     def require_memory(self) -> Any:
         return self._require_memory()
+
+    def close(self) -> None:
+        memory = self._memory
+        self._memory = None
+        close = getattr(memory, "close", None)
+        if callable(close):
+            close()
 
     def add_memory(
         self,
@@ -68,8 +75,8 @@ class PowerMemClient:
                 infer=True,
             )
         except Exception as exc:
-            raise PowerMemIngestionError(
-                f"PowerMem intelligent ingestion failed: {exc}"
+            raise PowerContextIngestionError(
+                f"PowerContext Source ingestion failed: {exc}"
             ) from exc
         return _mutations_from_infer_result(result)
 
@@ -118,14 +125,14 @@ def _records_from_add_result(
     metadata: MemoryMetadata,
 ) -> list[MemoryRecord]:
     if not isinstance(result, dict) or not isinstance(result.get("results"), list):
-        raise PowerMemResponseError(
-            "PowerMem returned an invalid ADD response: expected a results list"
+        raise PowerContextResponseError(
+            "PowerContext returned an invalid ADD response: expected a results list"
         )
 
     rows = result["results"]
     if not rows:
-        raise PowerMemResponseError(
-            "PowerMem returned an invalid ADD response: results must not be empty"
+        raise PowerContextResponseError(
+            "PowerContext returned an invalid ADD response: results must not be empty"
         )
 
     records: list[MemoryRecord] = []
@@ -135,8 +142,8 @@ def _records_from_add_result(
             or row.get("id") in (None, "")
             or not isinstance(row.get("memory"), str)
         ):
-            raise PowerMemResponseError(
-                "PowerMem returned an invalid ADD response: "
+            raise PowerContextResponseError(
+                "PowerContext returned an invalid ADD response: "
                 f"results[{index}] requires id and memory"
             )
         records.append(
@@ -155,8 +162,8 @@ def _mutations_from_infer_result(result: dict) -> list[InferredMemoryMutation]:
         or "results" not in result
         or not isinstance(result["results"], list)
     ):
-        raise PowerMemResponseError(
-            "PowerMem returned an invalid intelligent ingestion response: "
+        raise PowerContextResponseError(
+            "PowerContext returned an invalid Source ingestion response: "
             "expected a results list"
         )
 
@@ -169,8 +176,8 @@ def _mutations_from_infer_result(result: dict) -> list[InferredMemoryMutation]:
             or not row["memory"].strip()
             or row.get("event") not in {"ADD", "UPDATE", "DELETE"}
         ):
-            raise PowerMemResponseError(
-                "PowerMem returned an invalid intelligent ingestion response: "
+            raise PowerContextResponseError(
+                "PowerContext returned an invalid Source ingestion response: "
                 f"results[{index}] requires id, memory, and ADD/UPDATE/DELETE event"
             )
         mutations.append(

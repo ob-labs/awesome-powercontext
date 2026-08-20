@@ -79,11 +79,11 @@ describe("CockpitStage", () => {
       screen.getByAltText("Premium smart EV cockpit interior"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByLabelText("Holographic PowerMem evidence projection"),
+      screen.queryByLabelText("Holographic PowerContext evidence projection"),
     ).not.toBeInTheDocument();
-    const display = screen.getByLabelText("Panoramic PowerMem display");
+    const display = screen.getByLabelText("Panoramic PowerContext display");
     const sceneCard = within(display).getByLabelText(
-      "PowerMem projection summary",
+      "PowerContext projection summary",
     );
 
     expect(within(sceneCard).getByText("Day 45")).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("CockpitStage", () => {
     expect(
       within(display).queryByRole("button", { name: /day 90 act 10/i }),
     ).not.toBeInTheDocument();
-    expect(within(display).queryByText("PowerMem Drive")).not.toBeInTheDocument();
+    expect(within(display).queryByText("PowerContext Drive")).not.toBeInTheDocument();
     expect(display.querySelector(".infotainment-display__topbar")).not.toHaveTextContent(
       "Day 45",
     );
@@ -134,7 +134,7 @@ describe("CockpitStage", () => {
       />,
     );
 
-    const display = screen.getByLabelText("Panoramic PowerMem display");
+    const display = screen.getByLabelText("Panoramic PowerContext display");
     const batteryCard = within(display).getByLabelText("Battery status");
 
     expect(batteryCard).toHaveAttribute("data-battery-state", "low");
@@ -178,7 +178,7 @@ describe("CockpitStage", () => {
       />,
     );
 
-    const display = screen.getByLabelText("Panoramic PowerMem display");
+    const display = screen.getByLabelText("Panoramic PowerContext display");
     const careCard = within(display).getByLabelText("Battery safety recommendation");
 
     expect(careCard).toHaveTextContent("Nearest available charging station");
@@ -208,7 +208,7 @@ describe("CockpitStage", () => {
     );
 
     expect(
-      within(screen.getByLabelText("Panoramic PowerMem display")).getByLabelText(
+      within(screen.getByLabelText("Panoramic PowerContext display")).getByLabelText(
         "Climate temperature",
       ),
     ).toHaveTextContent("28.5°C");
@@ -224,13 +224,13 @@ describe("CockpitStage", () => {
       />,
     );
 
-    const display = screen.getByLabelText("Panoramic PowerMem display");
+    const display = screen.getByLabelText("Panoramic PowerContext display");
 
     expect(display).toHaveAttribute("data-display-mode", "automotive-glass");
     expect(display).toHaveAttribute("data-screen-placement", "center-touchscreen");
     expect(display).toHaveAttribute("data-frame-source", "background-image");
     expect(
-      within(display).getByLabelText("PowerMem projection summary"),
+      within(display).getByLabelText("PowerContext projection summary"),
     ).toBeInTheDocument();
     expect(within(display).getByLabelText("Battery status")).toBeInTheDocument();
     expect(within(display).getByLabelText("Climate temperature")).toBeInTheDocument();
@@ -253,7 +253,7 @@ describe("CockpitStage", () => {
     );
 
     const stage = screen.getByLabelText("Smart EV cockpit scene");
-    const display = within(stage).getByLabelText("Panoramic PowerMem display");
+    const display = within(stage).getByLabelText("Panoramic PowerContext display");
 
     expect(stage).toHaveAttribute("data-pet-anchor", "climate");
     expect(stage).toHaveAttribute("data-pet-origin-anchor", "driver");
@@ -281,7 +281,7 @@ describe("CockpitStage", () => {
       title: "Cabin linked",
       subtitle: "Intent understood, memory recalled, climate action applied.",
       scoreLabel: "Linked",
-      dockLabel: "Live PowerMem trace",
+      dockLabel: "Live PowerContext trace",
       routeReadout: "Driver zone 22°C -> 26°C",
       showMap: false,
       climateAction: {
@@ -298,7 +298,7 @@ describe("CockpitStage", () => {
       mediaPreference: {
         title: "Relaxed playlists",
         subtitle: "Driver music preference",
-        sourceLabel: "PowerMem media",
+        sourceLabel: "PowerContext media",
         volumeLabel: "Volume",
         volume: "22",
       },
@@ -313,7 +313,7 @@ describe("CockpitStage", () => {
       />,
     );
 
-    const display = screen.getByLabelText("Panoramic PowerMem display");
+    const display = screen.getByLabelText("Panoramic PowerContext display");
     const climateCard = within(display).getByLabelText("Climate temperature");
     const musicCard = within(display).getByLabelText("Bluetooth music");
 
@@ -356,7 +356,7 @@ describe("CockpitStage", () => {
       />,
     );
 
-    const display = screen.getByLabelText("Panoramic PowerMem display");
+    const display = screen.getByLabelText("Panoramic PowerContext display");
     const recommendationCard = within(display).getByLabelText(
       "Tonight's suggestion",
     );
@@ -399,7 +399,7 @@ describe("CockpitStage", () => {
       />,
     );
 
-    const display = screen.getByLabelText("Panoramic PowerMem display");
+    const display = screen.getByLabelText("Panoramic PowerContext display");
     const mapMode = within(display).getByLabelText("Navigation map mode");
 
     expect(mapMode).toHaveTextContent("Zhangjiang Science City");
@@ -415,7 +415,7 @@ describe("CockpitStage", () => {
     expect(within(display).queryByLabelText("Bluetooth music")).not.toBeInTheDocument();
   });
 
-  it("does not render a decorative music cover over PowerMem media details", () => {
+  it("does not render a decorative music cover over PowerContext media details", () => {
     render(
       <CockpitStage
         steps={steps}
@@ -425,13 +425,13 @@ describe("CockpitStage", () => {
       />,
     );
 
-    const display = screen.getByLabelText("Panoramic PowerMem display");
+    const display = screen.getByLabelText("Panoramic PowerContext display");
     const musicCard = within(display).getByLabelText("Bluetooth music");
 
     expect(
       musicCard.querySelector(".infotainment-display__music-cover"),
     ).not.toBeInTheDocument();
-    expect(within(musicCard).getByText("PowerMem media")).toBeInTheDocument();
+    expect(within(musicCard).getByText("PowerContext media")).toBeInTheDocument();
     expect(within(musicCard).getByText("Relaxed playlists")).toBeInTheDocument();
     expect(
       within(musicCard).getByText("Driver music preference"),
@@ -450,7 +450,7 @@ describe("CockpitStage", () => {
       />,
     );
 
-    const display = screen.getByLabelText("Panoramic PowerMem display");
+    const display = screen.getByLabelText("Panoramic PowerContext display");
     const musicCard = within(display).getByLabelText("Bluetooth music");
     const decreaseVolume = within(musicCard).getByRole("button", {
       name: "Decrease volume",
@@ -481,7 +481,7 @@ describe("CockpitStage", () => {
       />,
     );
 
-    const display = screen.getByLabelText("Panoramic PowerMem display");
+    const display = screen.getByLabelText("Panoramic PowerContext display");
     const musicCard = within(display).getByLabelText("Bluetooth music");
 
     expect(within(musicCard).getByText("Bluetooth connected")).toBeInTheDocument();
@@ -514,7 +514,7 @@ describe("CockpitStage", () => {
       />,
     );
 
-    const display = screen.getByLabelText("Panoramic PowerMem display");
+    const display = screen.getByLabelText("Panoramic PowerContext display");
     const musicCard = within(display).getByLabelText("Bluetooth music");
 
     await user.click(within(musicCard).getByRole("button", { name: "Pause music" }));
@@ -588,7 +588,7 @@ describe("CockpitStage", () => {
       />,
     );
 
-    const display = screen.getByLabelText("Panoramic PowerMem display");
+    const display = screen.getByLabelText("Panoramic PowerContext display");
 
     await user.click(within(display).getByRole("button", { name: "Previous scene" }));
     expect(onSelectScenario).toHaveBeenLastCalledWith(1);

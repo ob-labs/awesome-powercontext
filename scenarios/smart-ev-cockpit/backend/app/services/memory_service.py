@@ -4,15 +4,15 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.domain.memory_models import MemoryMetadata, MemoryRecord
-from app.powermem.client import PowerMemClient
-from app.powermem.filtering import (
+from app.powercontext.client import PowerContextClient
+from app.powercontext.filtering import (
     fallback_read_limit,
     needs_server_filter_fallback,
-    powermem_server_filters,
+    powercontext_server_filters,
     record_matches_filters,
     records_matching_filters,
 )
-from app.powermem.mappers import powermem_hit_to_record
+from app.powercontext.mappers import powercontext_hit_to_record
 from app.services.memory_ordering import sort_memories
 
 MIN_VECTOR_RELEVANCE_WINDOW = 20
@@ -31,7 +31,7 @@ class _SearchCandidate:
 
 
 class MemoryService:
-    def __init__(self, client: PowerMemClient):
+    def __init__(self, client: PowerContextClient):
         self.client = client
 
     def search(
@@ -57,13 +57,13 @@ class MemoryService:
             user_id=user_id,
         )
         records = records_matching_filters(
-            (powermem_hit_to_record(hit) for hit in hits),
+            (powercontext_hit_to_record(hit) for hit in hits),
             filters,
         )
         if not needs_server_filter_fallback(filters):
             return _deduplicate_records(sort_memories(records))[:limit]
 
-        server_filters = powermem_server_filters(filters)
+        server_filters = powercontext_server_filters(filters)
         read_limit = fallback_read_limit(limit)
         if not records:
             broad_hits = self.client.search_memories(
@@ -75,7 +75,7 @@ class MemoryService:
             records = _merge_unique(
                 records,
                 records_matching_filters(
-                    (powermem_hit_to_record(hit) for hit in broad_hits),
+                    (powercontext_hit_to_record(hit) for hit in broad_hits),
                     filters,
                 ),
             )
@@ -91,7 +91,7 @@ class MemoryService:
         records = _merge_unique(
             records,
             records_matching_filters(
-                (powermem_hit_to_record(row) for row in rows),
+                (powercontext_hit_to_record(row) for row in rows),
                 filters,
             ),
         )
@@ -112,7 +112,7 @@ class MemoryService:
             user_id=user_id,
         )
         candidates = _semantic_candidates(hits, filters)
-        server_filters = powermem_server_filters(filters)
+        server_filters = powercontext_server_filters(filters)
         read_limit = fallback_read_limit(limit)
 
         if not candidates and needs_server_filter_fallback(filters):
@@ -136,7 +136,7 @@ class MemoryService:
             limit=read_limit,
         )
         records = records_matching_filters(
-            (powermem_hit_to_record(row) for row in rows),
+            (powercontext_hit_to_record(row) for row in rows),
             filters,
         )
         return _deduplicate_records(sort_memories(records))[:limit]
@@ -182,7 +182,7 @@ def _semantic_candidates(
 ) -> list[_SearchCandidate]:
     candidates: list[_SearchCandidate] = []
     for original_rank, hit in enumerate(hits):
-        record = powermem_hit_to_record(hit)
+        record = powercontext_hit_to_record(hit)
         if not record_matches_filters(record, filters):
             continue
         raw_metadata = hit.get("metadata")

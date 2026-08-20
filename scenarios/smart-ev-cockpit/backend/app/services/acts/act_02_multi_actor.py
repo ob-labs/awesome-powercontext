@@ -1,6 +1,6 @@
 from app.domain.memory_models import MemoryOperation
 from app.domain.scenario_models import ActResult
-from app.powermem.queries import build_act_02_query
+from app.powercontext.queries import build_act_02_query
 from app.services.acts.base import ActContext
 from app.services.acts.localization import locale_for_context
 from app.services.memory_ordering import memory_rank
@@ -15,7 +15,7 @@ def handle(context: ActContext) -> ActResult:
         request.seat_position,
         request.user_id,
     )
-    hits = MemoryService(context.container.powermem_client).search(
+    hits = MemoryService(context.container.powercontext_client).search(
         query=query.query,
         filters=query.filters,
         limit=query.limit,

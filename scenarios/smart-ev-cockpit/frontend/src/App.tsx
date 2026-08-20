@@ -64,7 +64,7 @@ import { buildProjectionScene } from "./view-models/projection";
 const DEFAULT_SCENARIO_INDEX = 0;
 const DEFAULT_SCENARIO_STEPS = SCENARIO_STEPS_BY_LOCALE[DEFAULT_LOCALE];
 const DEMO_SESSION_ID = "demo_session_001";
-const PPT_DECK_SRC = "/powermem-smart-ev-cockpit-deck.html";
+const PPT_DECK_SRC = "/legacy-memory-layer-smart-ev-cockpit-deck.html";
 const EMPTY_UTTERANCE_DRAFTS: Record<ActorId, string> = {
   driver_primary: "",
   passenger_front: "",
@@ -151,21 +151,21 @@ export default function App() {
   const pptCopy =
     locale === "zh"
       ? {
-          entry: "PowerMem PPT",
-          openAria: "打开 PowerMem PPT",
-          dialogAria: "PowerMem(汽车智能座舱记忆方案)",
-          title: "PowerMem(汽车智能座舱记忆方案)",
-          subtitle: "16 页 HTML PPT：PowerMem 能力、智能座舱价值与 demo 项目总览。",
+          entry: "旧版 PowerMem PPT",
+          openAria: "打开旧版 PowerMem PPT",
+          dialogAria: "旧版 PowerMem 汽车智能座舱记忆方案",
+          title: "旧版 PowerMem 汽车智能座舱记忆方案",
+          subtitle: "迁移前的 16 页 PowerMem 产品稿，仅作为历史材料保留。",
           openInNew: "新窗口打开",
           close: "关闭",
         }
       : {
-          entry: "PowerMem PPT",
-          openAria: "Open PowerMem PPT",
-          dialogAria: "PowerMem smart EV cockpit PPT",
-          title: "PowerMem Smart EV Cockpit PPT",
+          entry: "Legacy PowerMem PPT",
+          openAria: "Open legacy PowerMem PPT",
+          dialogAria: "Legacy PowerMem smart EV cockpit PPT",
+          title: "Legacy PowerMem Smart EV Cockpit PPT",
           subtitle:
-            "A 16-slide HTML deck covering PowerMem, cockpit capabilities, and this demo.",
+            "The pre-migration 16-slide PowerMem product deck, retained as historical material.",
           openInNew: "Open in new tab",
           close: "Close",
         };
@@ -710,7 +710,7 @@ export default function App() {
             </header>
             <iframe
               className="ppt-modal__frame"
-              title="PowerMem smart EV cockpit PPT"
+              title="Legacy PowerMem smart EV cockpit PPT"
               src={PPT_DECK_SRC}
               loading="lazy"
               referrerPolicy="no-referrer"
@@ -859,7 +859,7 @@ function normalizeScenarioResponse(response: ScenarioResponse): ScenarioResponse
         : createChatMessageId("trace", 0),
     live_backend:
       typeof partial.live_backend === "string" ? partial.live_backend : "unknown",
-    powermem_connected: Boolean(partial.powermem_connected),
+    powercontext_connected: Boolean(partial.powercontext_connected),
     operations: arrayOrEmpty(partial.operations),
     memory_hits: arrayOrEmpty(partial.memory_hits),
     selected_memory_ids: arrayOrEmpty(partial.selected_memory_ids),

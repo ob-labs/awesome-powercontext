@@ -1,10 +1,9 @@
 import logging
 from dataclasses import dataclass, field
 
-from powermem import create_memory
-
 from app.domain.scenario_models import ScenarioClock
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
+from app.powercontext.runtime import EmbeddedPowerContextMemory, powercontext_config
 from app.services.chat_history_service import ChatHistoryService
 from app.services.identity_service import IdentityService
 from app.services.llm_service import OpenAICompatibleLlmClient
@@ -17,13 +16,9 @@ from app.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
-POWERMEM_EMBEDDING_TIMEOUT_SECONDS = 30.0
-POWERMEM_EMBEDDING_MAX_RETRIES = 0
-
-
 @dataclass
 class AppContainer:
-    powermem_client: PowerMemClient
+    powercontext_client: PowerContextClient
     llm_client: object | None = None
     trace_service: TraceService = field(default_factory=TraceService)
     journal_service: OperationJournalService = field(default_factory=OperationJournalService)
@@ -37,34 +32,37 @@ class AppContainer:
         default_factory=lambda: IdentityService(get_settings().identity_db_path)
     )
 
+    def close(self) -> None:
+        self.powercontext_client.close()
+
 
 def build_disconnected_container() -> AppContainer:
-    return AppContainer(powermem_client=PowerMemClient(memory=None), llm_client=build_llm_client())
+    return AppContainer(
+        powercontext_client=PowerContextClient(memory=None),
+        llm_client=build_llm_client(),
+    )
 
 
 def build_default_container() -> AppContainer:
+    settings = get_settings()
     llm_client = build_llm_client()
+    memory: EmbeddedPowerContextMemory | None = None
     try:
-        memory = create_memory()
-        _limit_embedding_request_duration(memory)
+        memory = EmbeddedPowerContextMemory(
+            config=powercontext_config(settings.powercontext_database_url),
+            scope_id=settings.powercontext_scope_id,
+            operation_timeout_seconds=settings.powercontext_operation_timeout_seconds,
+        )
         SeedingService(memory).seed()
     except Exception as exc:
-        logger.warning("PowerMem initialization failed; live mode disabled: %s", exc)
+        logger.warning("PowerContext initialization failed; live mode disabled: %s", exc)
+        if memory is not None:
+            memory.close()
         memory = None
 
-    return AppContainer(powermem_client=PowerMemClient(memory=memory), llm_client=llm_client)
-
-
-def _limit_embedding_request_duration(memory) -> None:
-    embedding = getattr(memory, "embedding", None)
-    client = getattr(embedding, "client", None)
-    with_options = getattr(client, "with_options", None)
-    if not callable(with_options):
-        return
-
-    embedding.client = with_options(
-        timeout=POWERMEM_EMBEDDING_TIMEOUT_SECONDS,
-        max_retries=POWERMEM_EMBEDDING_MAX_RETRIES,
+    return AppContainer(
+        powercontext_client=PowerContextClient(memory=memory),
+        llm_client=llm_client,
     )
 
 

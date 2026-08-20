@@ -20,16 +20,21 @@ from app.dependencies import (
 
 def create_app(
     container: AppContainer | None = None,
-    bootstrap_powermem: bool = False,
+    bootstrap_powercontext: bool = False,
 ) -> FastAPI:
     lifespan = None
-    if bootstrap_powermem:
+    if bootstrap_powercontext:
 
         @asynccontextmanager
         async def startup_lifespan(app: FastAPI) -> AsyncIterator[None]:
+            owns_container = container is None
             if container is None:
                 app.state.container = build_default_container()
-            yield
+            try:
+                yield
+            finally:
+                if owns_container:
+                    app.state.container.close()
 
         lifespan = startup_lifespan
 
@@ -56,4 +61,4 @@ def create_app(
     return app
 
 
-app = create_app(bootstrap_powermem=True)
+app = create_app(bootstrap_powercontext=True)

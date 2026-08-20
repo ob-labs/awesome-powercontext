@@ -1,5 +1,5 @@
 from app.domain.memory_models import MemoryMetadata, MemoryRecord
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.services.memory_service import MemoryService
 
 
@@ -65,7 +65,7 @@ def _search_hit(
     }
 
 
-class SearchMissListHitPowerMem:
+class SearchMissListHitPowerContext:
     def __init__(self, records: list[MemoryRecord]):
         self.records = records
         self.search_calls: list[dict] = []
@@ -83,7 +83,7 @@ class SearchMissListHitPowerMem:
         return {"results": [_raw(record) for record in self.records]}
 
 
-class RankedSearchPowerMem:
+class RankedSearchPowerContext:
     def __init__(
         self,
         broad_results: list[dict],
@@ -121,7 +121,7 @@ def _chat_search(service: MemoryService, *, query: str, limit: int = 2):
 
 
 def test_search_falls_back_to_list_and_filters_metadata_in_application():
-    raw_memory = SearchMissListHitPowerMem(
+    raw_memory = SearchMissListHitPowerContext(
         [
             _record("driver-cabin"),
             _record(
@@ -131,7 +131,7 @@ def test_search_falls_back_to_list_and_filters_metadata_in_application():
             ),
         ]
     )
-    service = MemoryService(PowerMemClient(raw_memory))
+    service = MemoryService(PowerContextClient(raw_memory))
 
     records = service.search(
         query="cold cabin preferences and safety policy for driver_primary front_left",
@@ -192,13 +192,13 @@ def test_search_promotes_relevant_recent_chat_memory_without_listing_merge():
         fts_rank=1,
         vector_rank=1,
     )
-    raw = RankedSearchPowerMem(
+    raw = RankedSearchPowerContext(
         broad_results=[seed, coffee],
         listed_results=[seed],
     )
 
     records = _chat_search(
-        MemoryService(PowerMemClient(raw)),
+        MemoryService(PowerContextClient(raw)),
         query="我喜欢喝咖啡吗",
     )
 
@@ -234,10 +234,10 @@ def test_search_does_not_promote_chat_memory_beyond_vector_relevance_window():
         source_event_ids=["demo_session:trace_coffee:chat"],
         vector_rank=21,
     )
-    raw = RankedSearchPowerMem([weather_one, weather_two, coffee])
+    raw = RankedSearchPowerContext([weather_one, weather_two, coffee])
 
     records = _chat_search(
-        MemoryService(PowerMemClient(raw)),
+        MemoryService(PowerContextClient(raw)),
         query="今天天气如何",
         limit=3,
     )
@@ -263,10 +263,10 @@ def test_search_promotes_chat_memory_at_vector_relevance_boundary():
         vector_rank=20,
         vector_similarity=0.5,
     )
-    raw = RankedSearchPowerMem([seed, chat])
+    raw = RankedSearchPowerContext([seed, chat])
 
     records = _chat_search(
-        MemoryService(PowerMemClient(raw)),
+        MemoryService(PowerContextClient(raw)),
         query="我的偏好是什么",
         limit=2,
     )
@@ -287,10 +287,10 @@ def test_search_rejects_top_ranked_chat_memory_with_low_vector_similarity():
         vector_rank=1,
         vector_similarity=0.44,
     )
-    raw = RankedSearchPowerMem([coffee])
+    raw = RankedSearchPowerContext([coffee])
 
     records = _chat_search(
-        MemoryService(PowerMemClient(raw)),
+        MemoryService(PowerContextClient(raw)),
         query="今天天气如何",
         limit=1,
     )
@@ -326,10 +326,10 @@ def test_search_orders_relevant_chat_memories_newest_first_before_seed():
         fts_rank=3,
         vector_rank=3,
     )
-    raw = RankedSearchPowerMem([older_chat, seed, newer_chat])
+    raw = RankedSearchPowerContext([older_chat, seed, newer_chat])
 
     records = _chat_search(
-        MemoryService(PowerMemClient(raw)),
+        MemoryService(PowerContextClient(raw)),
         query="我的咖啡偏好是什么",
         limit=3,
     )
@@ -341,7 +341,7 @@ def test_search_orders_relevant_chat_memories_newest_first_before_seed():
     ]
 
 
-def test_search_without_fusion_metadata_preserves_powermem_order():
+def test_search_without_fusion_metadata_preserves_powercontext_order():
     first = _search_hit(
         "first",
         "first semantic result",
@@ -358,10 +358,10 @@ def test_search_without_fusion_metadata_preserves_powermem_order():
     )
     first["metadata"].pop("_fusion_info")
     second["metadata"].pop("_fusion_info")
-    raw = RankedSearchPowerMem([first, second])
+    raw = RankedSearchPowerContext([first, second])
 
     records = _chat_search(
-        MemoryService(PowerMemClient(raw)),
+        MemoryService(PowerContextClient(raw)),
         query="preference",
     )
 
@@ -378,10 +378,10 @@ def test_search_deduplicates_semantic_candidates_by_memory_id():
         fts_rank=1,
         vector_rank=1,
     )
-    raw = RankedSearchPowerMem([coffee, coffee])
+    raw = RankedSearchPowerContext([coffee, coffee])
 
     records = _chat_search(
-        MemoryService(PowerMemClient(raw)),
+        MemoryService(PowerContextClient(raw)),
         query="我喜欢喝咖啡吗",
         limit=5,
     )
@@ -406,10 +406,10 @@ def test_search_deduplicates_semantic_candidates_by_normalized_content():
         source_event_ids=["gen_capability_000002"],
         vector_rank=2,
     )
-    raw = RankedSearchPowerMem([first, duplicate])
+    raw = RankedSearchPowerContext([first, duplicate])
 
     records = _chat_search(
-        MemoryService(PowerMemClient(raw)),
+        MemoryService(PowerContextClient(raw)),
         query="还有其他的吗",
         limit=5,
     )

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from app.domain.memory_models import InferredMemoryMutation, MemoryOperation
 from app.domain.scenario_models import ActRequest
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 
 _EXPLICIT_MEMORY_REQUEST_PREFIXES = (
     "请记住",
@@ -66,7 +66,7 @@ class ChatMemoryIngestionResult:
 
 
 class ChatMemoryService:
-    def __init__(self, client: PowerMemClient):
+    def __init__(self, client: PowerContextClient):
         self.client = client
 
     def ingest(

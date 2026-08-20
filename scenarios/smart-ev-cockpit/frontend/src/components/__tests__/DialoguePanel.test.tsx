@@ -78,7 +78,7 @@ describe("DialoguePanel", () => {
       {
         id: "assistant-new",
         role: "assistant" as const,
-        text: "新的 PowerMem 回复",
+        text: "新的 PowerContext 回复",
       },
     ];
     const { rerender } = render(

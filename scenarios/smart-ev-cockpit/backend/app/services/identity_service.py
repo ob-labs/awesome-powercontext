@@ -4,8 +4,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from app.domain.identity_models import UserIdentity, UserProfileSummary
-from app.powermem.client import PowerMemClient
-from app.powermem.mappers import powermem_hit_to_record
+from app.powercontext.client import PowerContextClient
+from app.powercontext.mappers import powercontext_hit_to_record
 
 DEFAULT_IDENTITIES = (
     {
@@ -96,11 +96,11 @@ class IdentityService:
         self,
         actor_id: str,
         *,
-        powermem_client: PowerMemClient,
+        powercontext_client: PowerContextClient,
         limit: int = 24,
     ) -> UserProfileSummary:
         identity = self.get_identity(actor_id)
-        rows = powermem_client.list_memories(
+        rows = powercontext_client.list_memories(
             filters={
                 "scenario_id": "smart_ev_cockpit",
                 "vehicle_id": "demo_vehicle_001",
@@ -108,7 +108,7 @@ class IdentityService:
             user_id=identity.user_id,
             limit=limit,
         )
-        memories = [powermem_hit_to_record(row) for row in rows]
+        memories = [powercontext_hit_to_record(row) for row in rows]
         memories.sort(
             key=lambda memory: (
                 memory.metadata.memory_kind != "person_profile",

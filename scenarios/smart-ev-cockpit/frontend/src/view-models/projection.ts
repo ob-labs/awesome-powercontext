@@ -141,7 +141,7 @@ export function buildProjectionScene({
       scoreLabel: copy.error,
       dockLabel: copy.liveModeNeedsAttention,
       chips: [
-        { label: copy.backend, value: "PowerMem" },
+        { label: copy.backend, value: "PowerContext" },
         { label: copy.state, value: copy.error },
         { label: copy.action, value: copy.checkService },
       ],
@@ -163,11 +163,11 @@ export function buildProjectionScene({
         title: copy.assistant,
         subtitle: response.assistant_reply,
         scoreLabel: copy.live,
-        dockLabel: response.powermem_connected ? copy.llmChat : copy.disconnected,
+        dockLabel: response.powercontext_connected ? copy.llmChat : copy.disconnected,
         chips: [
           {
             label: copy.trace,
-            value: response.powermem_connected ? copy.synced : copy.disconnected,
+            value: response.powercontext_connected ? copy.synced : copy.disconnected,
           },
           { label: copy.memory, value: primaryMemory?.memory_kind ?? copy.noHit },
           {
@@ -224,8 +224,8 @@ export function buildProjectionScene({
       title: copy.cabinLinked,
       subtitle: copy.cabinLinkedSubtitle,
       scoreLabel: copy.linked,
-      dockLabel: response.powermem_connected
-        ? copy.livePowerMemTrace
+      dockLabel: response.powercontext_connected
+        ? copy.livePowerContextTrace
         : copy.disconnected,
       chips: [
         { label: copy.intent, value: copy.coldIntentByActor[selectedActorId] },
@@ -323,8 +323,8 @@ function buildBatteryCareProjection(
     title: copy.batteryCareTitle,
     subtitle: copy.batteryCareSubtitle(batteryState.percent, batteryState.rangeKm),
     scoreLabel: copy.linked,
-    dockLabel: response.powermem_connected
-      ? copy.livePowerMemTrace
+    dockLabel: response.powercontext_connected
+      ? copy.livePowerContextTrace
       : copy.disconnected,
     chips: [
       {
@@ -397,8 +397,8 @@ function buildRelationshipProjection(
     title,
     subtitle: summary,
     scoreLabel: copy.linked,
-    dockLabel: response.powermem_connected
-      ? copy.livePowerMemTrace
+    dockLabel: response.powercontext_connected
+      ? copy.livePowerContextTrace
       : copy.disconnected,
     chips: [
       { label: copy.destination, value: regionLabel },

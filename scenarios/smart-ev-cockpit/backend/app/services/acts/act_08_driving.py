@@ -19,7 +19,7 @@ def handle(context: ActContext) -> ActResult:
         "seat_position": request.seat_position,
         "memory_kind": {"in": ["driving_preference", "emotional_preference"]},
     }
-    hits = MemoryService(context.container.powermem_client).search(
+    hits = MemoryService(context.container.powercontext_client).search(
         query=query,
         filters=filters,
         limit=100,

@@ -35,11 +35,11 @@ describe("TestDataPanel", () => {
     expect(
       screen.getByRole("button", { name: /generate and import 1200 memories/i }),
     ).toHaveTextContent("Generate Data");
-    expect(screen.getByRole("button", { name: /clear all powermem memories/i })).toHaveTextContent(
+    expect(screen.getByRole("button", { name: /clear all powercontext memories/i })).toHaveTextContent(
       "Clear Data",
     );
     expect(
-      screen.queryByRole("button", { name: /import to powermem/i }),
+      screen.queryByRole("button", { name: /import to powercontext/i }),
     ).not.toBeInTheDocument();
     expect(screen.getByText("smart_ev_cockpit_20260708_1200_seed42")).toBeInTheDocument();
     expect(screen.getByText(/1200 generated/i)).toBeInTheDocument();
@@ -60,7 +60,7 @@ describe("TestDataPanel", () => {
       screen.getByRole("button", { name: /generate and import 1200 memories/i }),
     ).toBeEnabled();
     expect(
-      screen.getByRole("button", { name: /clear all powermem memories/i }),
+      screen.getByRole("button", { name: /clear all powercontext memories/i }),
     ).toBeEnabled();
   });
 
@@ -84,7 +84,7 @@ describe("TestDataPanel", () => {
       screen.getByRole("button", { name: /generate and import 1200 memories/i }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: /clear all powermem memories/i }),
+      screen.getByRole("button", { name: /clear all powercontext memories/i }),
     ).toBeDisabled();
   });
 
@@ -104,7 +104,7 @@ describe("TestDataPanel", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /clear all powermem memories/i }),
+      screen.getByRole("button", { name: /clear all powercontext memories/i }),
     ).toBeEnabled();
     expect(screen.getByText(/1200 imported/i)).toBeInTheDocument();
   });
@@ -128,7 +128,7 @@ describe("TestDataPanel", () => {
       screen.getByRole("button", { name: /generate and import 1200 memories/i }),
     );
     await user.click(
-      screen.getByRole("button", { name: /clear all powermem memories/i }),
+      screen.getByRole("button", { name: /clear all powercontext memories/i }),
     );
 
     expect(onGenerate).toHaveBeenCalledWith(1200);

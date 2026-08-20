@@ -6,10 +6,10 @@ export function describeChatSource(operations: TraceOperation[]): string {
   const types = new Set(operations.map((operation) => operation.type.toUpperCase()));
   const mutation = MUTATION_TYPES.find((type) => types.has(type));
   if (mutation) {
-    return `PowerMem ${mutation} + LLM`;
+    return `PowerContext ${mutation} + LLM`;
   }
   if (types.has("SEARCH")) {
-    return "PowerMem SEARCH + LLM";
+    return "PowerContext SEARCH + LLM";
   }
   return "LLM";
 }

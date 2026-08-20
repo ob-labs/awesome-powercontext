@@ -269,8 +269,8 @@ export function buildPetCompanionState({
       target: "error",
       speech:
         locale === "zh"
-          ? `PowerMem 链路需要检查：${liveError ?? projection.subtitle}`
-          : `PowerMem needs attention: ${liveError ?? projection.subtitle}`,
+          ? `PowerContext 链路需要检查：${liveError ?? projection.subtitle}`
+          : `PowerContext needs attention: ${liveError ?? projection.subtitle}`,
       cueLabel: locale === "zh" ? "链路检查" : "Link check",
       memoryOrbLabel: locale === "zh" ? "异常信号" : "Error signal",
     }, originAnchor, "error");

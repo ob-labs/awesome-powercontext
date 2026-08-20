@@ -17,7 +17,7 @@ def handle(context: ActContext) -> ActResult:
         "seat_position": "rear_left",
         "memory_kind": {"in": ["media_preference", "safety_policy"]},
     }
-    hits = MemoryService(context.container.powermem_client).search(
+    hits = MemoryService(context.container.powercontext_client).search(
         query=query,
         filters=filters,
         limit=ACT_06_SEARCH_LIMIT,

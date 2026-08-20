@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 from typing import Literal
 
 from app.domain.memory_models import MemoryRecord
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.services.memory_service import MemoryService
 
 SCENARIO_START_DATE = date(2026, 1, 1)
@@ -48,7 +48,7 @@ class LifecycleExecutionError(RuntimeError):
 
 
 class LifecycleService:
-    def __init__(self, client: PowerMemClient | None = None):
+    def __init__(self, client: PowerContextClient | None = None):
         self._memory_service = MemoryService(client) if client is not None else None
 
     def apply_clock(self, memory: MemoryRecord, current_day: int) -> MemoryRecord:
@@ -112,7 +112,7 @@ class LifecycleService:
         current_day: int,
     ) -> LifecycleRunResult:
         if self._memory_service is None:
-            raise RuntimeError("Lifecycle execution requires a PowerMem client")
+            raise RuntimeError("Lifecycle execution requires a PowerContext client")
         plan = self.plan(memories, current_day)
         completed: list[dict] = []
         audit = self._skipped_update_evidence(memories, current_day)
@@ -125,11 +125,11 @@ class LifecycleService:
                         operation.metadata_updates,
                     )
                     if not self._is_successful_update(update_result):
-                        raise RuntimeError("PowerMem did not confirm update")
+                        raise RuntimeError("PowerContext did not confirm update")
                 else:
                     deleted = self._memory_service.delete(operation.memory_id)
                     if not deleted:
-                        raise RuntimeError("PowerMem did not confirm deletion")
+                        raise RuntimeError("PowerContext did not confirm deletion")
             except Exception as exc:
                 failed = {**evidence, "result": "failed", "error": str(exc)}
                 audit.append(failed)

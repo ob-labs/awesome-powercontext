@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from app.dependencies import AppContainer
 from app.main import create_app
-from app.powermem.client import PowerMemClient
+from app.powercontext.client import PowerContextClient
 from app.services.chat_history_service import ChatHistoryService
 from app.services.llm_service import LlmConnectionError
 
@@ -20,7 +20,7 @@ def test_health_returns_live_service_metadata():
     }
 
 
-class FakePowerMem:
+class FakePowerContext:
     def __init__(self):
         self.add_calls = []
 
@@ -68,7 +68,7 @@ class FakePowerMem:
         return {"results": [{"id": "mem_usage", "memory": content, "metadata": metadata}]}
 
 
-class RecordingPowerMem:
+class RecordingPowerContext:
     def __init__(self, infer_results=None):
         self.add_calls = []
         self.search_calls = []
@@ -137,7 +137,7 @@ def build_chat_api(tmp_path, memory, llm_client=None):
     client = TestClient(
         create_app(
             container=AppContainer(
-                powermem_client=PowerMemClient(memory),
+                powercontext_client=PowerContextClient(memory),
                 llm_client=llm,
                 chat_history_service=history,
             )
@@ -160,10 +160,10 @@ def post_free_form_chat(client, text):
 
 
 def test_utter_returns_trace_evidence_vehicle_diff_and_persists_chat(tmp_path):
-    memory = FakePowerMem()
+    memory = FakePowerContext()
     chat_history = ChatHistoryService(tmp_path / "chat.sqlite3")
     container = AppContainer(
-        powermem_client=PowerMemClient(memory=memory),
+        powercontext_client=PowerContextClient(memory=memory),
         chat_history_service=chat_history,
     )
     app = create_app(container=container)
@@ -181,8 +181,8 @@ def test_utter_returns_trace_evidence_vehicle_diff_and_persists_chat(tmp_path):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["powermem_connected"] is True
-    assert body["live_backend"] == "powermem_sdk"
+    assert body["powercontext_connected"] is True
+    assert body["live_backend"] == "powercontext_builtin"
     assert body["trace_id"].startswith("trace_")
     assert body["memory_hits"][0]["memory_id"] == "mem_winter"
     assert {
@@ -206,11 +206,11 @@ def test_utter_returns_trace_evidence_vehicle_diff_and_persists_chat(tmp_path):
 
 
 def test_unknown_unkeyed_utterance_uses_llm_chat_and_persists_turn(tmp_path):
-    memory = RecordingPowerMem()
+    memory = RecordingPowerContext()
     llm_client = RecordingLlmClient()
     chat_history = ChatHistoryService(tmp_path / "chat.sqlite3")
     container = AppContainer(
-        powermem_client=PowerMemClient(memory=memory),
+        powercontext_client=PowerContextClient(memory=memory),
         llm_client=llm_client,
         chat_history_service=chat_history,
     )
@@ -236,7 +236,7 @@ def test_unknown_unkeyed_utterance_uses_llm_chat_and_persists_turn(tmp_path):
         "SEARCH",
     ]
     assert body["act_key"] == "Chat"
-    assert body["data_source"] == "powermem_sdk+llm"
+    assert body["data_source"] == "powercontext_builtin+llm"
     assert memory.search_calls == [
         {
             "query": "今天天气如何",
@@ -281,8 +281,8 @@ def test_unknown_unkeyed_utterance_uses_llm_chat_and_persists_turn(tmp_path):
     ]
 
 
-def test_free_form_preference_runs_real_powermem_add(tmp_path):
-    memory = RecordingPowerMem(
+def test_free_form_preference_runs_real_powercontext_add(tmp_path):
+    memory = RecordingPowerContext(
         [{"id": "mem_coffee", "memory": "用户喜欢咖啡", "event": "ADD"}]
     )
     llm = RecordingLlmClient(reply="已将咖啡偏好保存到长期记忆。")
@@ -298,14 +298,14 @@ def test_free_form_preference_runs_real_powermem_add(tmp_path):
         "SEARCH",
     ]
     assert body["operations"][1]["memory_ids"] == ["mem_coffee"]
-    assert body["data_source"] == "powermem_sdk+llm"
+    assert body["data_source"] == "powercontext_builtin+llm"
     assert memory.add_calls[0]["infer"] is True
     assert llm.chat_calls[0]["memory_mutations"][0]["memory_id"] == "mem_coffee"
     assert len(history.list_messages(session_id="demo_session_001")) == 2
 
 
-def test_changed_preference_preserves_powermem_update(tmp_path):
-    memory = RecordingPowerMem(
+def test_changed_preference_preserves_powercontext_update(tmp_path):
+    memory = RecordingPowerContext(
         [
             {
                 "id": "mem_drink",
@@ -337,8 +337,8 @@ def test_changed_preference_preserves_powermem_update(tmp_path):
     }
 
 
-def test_chat_returns_503_when_powermem_ingestion_fails(tmp_path):
-    class FailingInferencePowerMem(RecordingPowerMem):
+def test_chat_returns_503_when_powercontext_ingestion_fails(tmp_path):
+    class FailingInferencePowerContext(RecordingPowerContext):
         def add(self, messages, user_id=None, metadata=None, infer=False):
             self.add_calls.append(
                 {
@@ -350,13 +350,13 @@ def test_chat_returns_503_when_powermem_ingestion_fails(tmp_path):
             )
             raise RuntimeError("OceanBase write failed")
 
-    memory = FailingInferencePowerMem()
+    memory = FailingInferencePowerContext()
     client, history, llm = build_chat_api(tmp_path, memory)
 
     response = post_free_form_chat(client, "我喜欢喝咖啡")
 
     assert response.status_code == 503
-    assert "PowerMem intelligent ingestion failed" in response.json()["detail"]
+    assert "PowerContext Source ingestion failed" in response.json()["detail"]
     assert history.list_messages(session_id="demo_session_001") == []
     assert llm.chat_calls == []
 
@@ -367,7 +367,7 @@ def test_chat_reports_successful_mutation_when_llm_generation_fails(tmp_path):
             self.chat_calls.append(kwargs)
             raise LlmConnectionError("gateway timeout")
 
-    memory = RecordingPowerMem(
+    memory = RecordingPowerContext(
         [{"id": "mem_coffee", "memory": "用户喜欢咖啡", "event": "ADD"}]
     )
     client, history, llm = build_chat_api(tmp_path, memory, FailingLlmClient())
@@ -376,7 +376,7 @@ def test_chat_reports_successful_mutation_when_llm_generation_fails(tmp_path):
 
     assert response.status_code == 503
     detail = response.json()["detail"]
-    assert "PowerMem mutation succeeded" in detail
+    assert "PowerContext mutation succeeded" in detail
     assert "ADD:mem_coffee" in detail
     assert "gateway timeout" in detail
     assert history.list_messages(session_id="demo_session_001") == []
@@ -384,7 +384,7 @@ def test_chat_reports_successful_mutation_when_llm_generation_fails(tmp_path):
 
 
 def test_chat_ingests_scrubbed_text_instead_of_raw_sensitive_input(tmp_path):
-    memory = RecordingPowerMem()
+    memory = RecordingPowerContext()
     client, _, _ = build_chat_api(tmp_path, memory)
 
     response = post_free_form_chat(client, "我喜欢咖啡，电话13812345678")
@@ -419,7 +419,7 @@ def test_exact_coffee_question_passes_recent_chat_memory_to_llm(tmp_path):
         "_fusion_info": {"fts_rank": 1, "vector_rank": 1},
     }
 
-    class ChatRecallPowerMem(RecordingPowerMem):
+    class ChatRecallPowerContext(RecordingPowerContext):
         def search(self, query, user_id=None, filters=None, limit=5):
             self.search_calls.append(
                 {
@@ -446,7 +446,7 @@ def test_exact_coffee_question_passes_recent_chat_memory_to_llm(tmp_path):
                 ]
             }
 
-    memory = ChatRecallPowerMem()
+    memory = ChatRecallPowerContext()
     llm = RecordingLlmClient(reply="是的，您喜欢喝咖啡。")
     client, _, llm = build_chat_api(tmp_path, memory, llm)
 
@@ -468,10 +468,10 @@ def test_exact_coffee_question_passes_recent_chat_memory_to_llm(tmp_path):
 def test_unknown_unkeyed_utterance_uses_memory_chat_when_llm_is_not_configured(
     tmp_path,
 ):
-    memory = FakePowerMem()
+    memory = FakePowerContext()
     chat_history = ChatHistoryService(tmp_path / "chat.sqlite3")
     container = AppContainer(
-        powermem_client=PowerMemClient(memory=memory),
+        powercontext_client=PowerContextClient(memory=memory),
         llm_client=None,
         chat_history_service=chat_history,
     )
@@ -531,7 +531,7 @@ def test_chat_history_endpoint_filters_messages_by_actor(tmp_path):
     )
     app = create_app(
         container=AppContainer(
-            powermem_client=PowerMemClient(memory=RecordingPowerMem()),
+            powercontext_client=PowerContextClient(memory=RecordingPowerContext()),
             chat_history_service=chat_history,
         )
     )
@@ -548,8 +548,8 @@ def test_chat_history_endpoint_filters_messages_by_actor(tmp_path):
     assert body["messages"][0]["actor_id"] == "driver_primary"
 
 
-def test_utter_fails_when_powermem_is_not_connected():
-    app = create_app(container=AppContainer(powermem_client=PowerMemClient(memory=None)))
+def test_utter_fails_when_powercontext_is_not_connected():
+    app = create_app(container=AppContainer(powercontext_client=PowerContextClient(memory=None)))
     client = TestClient(app)
 
     response = client.post(
@@ -563,4 +563,4 @@ def test_utter_fails_when_powermem_is_not_connected():
     )
 
     assert response.status_code == 503
-    assert "PowerMem is not connected" in response.json()["detail"]
+    assert "PowerContext is not connected" in response.json()["detail"]

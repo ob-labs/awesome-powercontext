@@ -57,7 +57,7 @@ def handle(context: ActContext) -> ActResult:
         f"target_temp_c={target_temp_c:g}; "
         f"seat_heat_level={seat_heat_level}"
     )
-    records = MemoryService(context.container.powermem_client).add(
+    records = MemoryService(context.container.powercontext_client).add(
         content=content,
         metadata=metadata,
         user_id=context.request.user_id or context.request.actor_id,

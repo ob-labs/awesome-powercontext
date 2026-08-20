@@ -5,9 +5,10 @@ from app.main import create_app
 from app.services.seeding_service import SeedingService
 
 
-class RecordingPowerMem:
+class RecordingPowerContext:
     def __init__(self):
         self.add_calls = []
+        self.closed = False
 
     def add(self, content, user_id=None, metadata=None, infer=False):
         self.add_calls.append(
@@ -28,13 +29,22 @@ class RecordingPowerMem:
             ]
         }
 
+    def close(self):
+        self.closed = True
 
-class FailingSeedPowerMem:
+
+class FailingSeedPowerContext:
+    def __init__(self):
+        self.closed = False
+
     def add(self, content, user_id=None, metadata=None, infer=False):
         raise RuntimeError("seed write failed")
 
+    def close(self):
+        self.closed = True
 
-class ExistingSeedPowerMem:
+
+class ExistingSeedPowerContext:
     def __init__(self):
         self.add_calls = []
         self.get_all_calls = []
@@ -59,75 +69,46 @@ class ExistingSeedPowerMem:
         return {"results": []}
 
 
-class RecordingOpenAIClient:
-    def __init__(self):
-        self.with_options_calls = []
-        self.configured_client = object()
-
-    def with_options(self, **options):
-        self.with_options_calls.append(options)
-        return self.configured_client
-
-
-class ConfigurablePowerMem(RecordingPowerMem):
-    def __init__(self):
-        super().__init__()
-        self.embedding = type("Embedding", (), {})()
-        self.embedding.client = RecordingOpenAIClient()
-
-
-def test_create_app_does_not_bootstrap_powermem_by_default(monkeypatch):
+def test_create_app_does_not_bootstrap_powercontext_by_default(monkeypatch):
     def fail_bootstrap():
-        raise AssertionError("PowerMem bootstrap should not run")
+        raise AssertionError("PowerContext bootstrap should not run")
 
     monkeypatch.setattr("app.main.build_default_container", fail_bootstrap)
 
     app = create_app()
 
-    assert app.state.container.powermem_client.is_connected is False
+    assert app.state.container.powercontext_client.is_connected is False
 
 
-def test_default_container_initializes_powermem(monkeypatch):
-    created = RecordingPowerMem()
+def test_default_container_initializes_powercontext(monkeypatch):
+    created = RecordingPowerContext()
 
-    def fake_create_memory():
-        return created
-
-    monkeypatch.setattr("app.dependencies.create_memory", fake_create_memory)
-
-    container = build_default_container()
-
-    assert container.powermem_client.is_connected is True
-
-
-def test_default_container_limits_embedding_request_duration(monkeypatch):
-    created = ConfigurablePowerMem()
-    original_client = created.embedding.client
-
-    monkeypatch.setattr("app.dependencies.create_memory", lambda: created)
+    monkeypatch.setattr(
+        "app.dependencies.EmbeddedPowerContextMemory",
+        lambda **_kwargs: created,
+    )
 
     container = build_default_container()
 
-    assert container.powermem_client.is_connected is True
-    assert original_client.with_options_calls == [
-        {"timeout": 30.0, "max_retries": 0}
-    ]
-    assert created.embedding.client is original_client.configured_client
+    assert container.powercontext_client.is_connected is True
 
 
-def test_default_container_disables_powermem_when_seed_fails(monkeypatch):
-    def fake_create_memory():
-        return FailingSeedPowerMem()
+def test_default_container_disables_powercontext_when_seed_fails(monkeypatch):
+    created = FailingSeedPowerContext()
 
-    monkeypatch.setattr("app.dependencies.create_memory", fake_create_memory)
+    monkeypatch.setattr(
+        "app.dependencies.EmbeddedPowerContextMemory",
+        lambda **_kwargs: created,
+    )
 
     container = build_default_container()
 
-    assert container.powermem_client.is_connected is False
+    assert container.powercontext_client.is_connected is False
+    assert created.closed is True
 
 
 def test_seeding_service_writes_summer_cabin_memory():
-    memory = RecordingPowerMem()
+    memory = RecordingPowerContext()
 
     result = SeedingService(
         memory,
@@ -174,7 +155,7 @@ def test_seeding_service_writes_summer_cabin_memory():
 
 
 def test_seeding_service_reuses_existing_seasonal_cabin_memory():
-    memory = ExistingSeedPowerMem()
+    memory = ExistingSeedPowerContext()
 
     result = SeedingService(
         memory,
